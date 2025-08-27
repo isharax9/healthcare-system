@@ -100,18 +100,24 @@ public class BillingController {
         int selectedRow = view.billsTable.getSelectedRow();
         if (selectedRow == -1) return;
 
-        // This is a simple implementation. In a real app, you might re-fetch the
-        // full object from the DB to get the most up-to-date log.
-        MedicalBill selectedBill = currentBills.get(selectedRow);
+        MedicalBill selectedBillStub = currentBills.get(selectedRow);
 
-        // The log isn't currently loaded in searchBills, so we must refetch.
-        // Let's add a getBillById method to the DAO.
-        // For now, we'll just show a message.
-        JOptionPane.showMessageDialog(view,
-                "Log viewing feature requires fetching full bill details.\n" +
-                        "Status: " + selectedBill.getStatus(),
-                "Processing Info for Bill #" + selectedBill.getBillId(),
-                JOptionPane.INFORMATION_MESSAGE);
+        // Fetch the full bill object from the database, including the log
+        MedicalBill fullBill = billingDAO.getBillById(selectedBillStub.getBillId());
+
+        if (fullBill != null) {
+            JTextArea textArea = new JTextArea(20, 50);
+            textArea.setText(fullBill.getProcessingLog());
+            textArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(textArea);
+
+            JOptionPane.showMessageDialog(view,
+                    scrollPane,
+                    "Processing Log for Bill #" + fullBill.getBillId(),
+                    JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(view, "Could not retrieve full details for this bill.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void processBill() {

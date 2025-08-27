@@ -2,6 +2,7 @@ package com.globemed.patient;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.globemed.insurance.InsurancePlan;
 
 // This class is both the Originator for the Memento pattern
 // and the Prototype for the Prototype pattern.
@@ -11,6 +12,7 @@ public class PatientRecord implements Cloneable {
     private String name;
     private List<String> medicalHistory;
     private List<String> treatmentPlans;
+    private InsurancePlan insurancePlan;
 
     public PatientRecord(String patientId, String name) {
         this.patientId = patientId;
@@ -25,6 +27,8 @@ public class PatientRecord implements Cloneable {
     public void setName(String name) { this.name = name; }
     public List<String> getMedicalHistory() { return new ArrayList<>(medicalHistory); } // Return copy
     public List<String> getTreatmentPlans() { return new ArrayList<>(treatmentPlans); } // Return copy
+    public InsurancePlan getInsurancePlan() { return insurancePlan; }
+    public void setInsurancePlan(InsurancePlan insurancePlan) { this.insurancePlan = insurancePlan; }
 
     // Methods to modify the state
     public void addMedicalHistory(String history) {

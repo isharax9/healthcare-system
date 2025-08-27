@@ -95,6 +95,37 @@ public class BillingDAO {
         return bills;
     }
 
+    public MedicalBill getBillById(int billId) {
+        String sql = "SELECT * FROM billing WHERE bill_id = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, billId);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                MedicalBill bill = new MedicalBill(
+                        rs.getString("patient_id"),
+                        rs.getString("service_description"),
+                        rs.getDouble("amount"),
+                        rs.getString("insurance_policy_number")
+                );
+                bill.setBillId(rs.getInt("bill_id"));
+                bill.setStatus(rs.getString("status"));
+
+                // This is the important part: we load the full log
+                String processingLog = rs.getString("processing_log");
+                // We need a way to set the log in the MedicalBill object
+                bill.setProcessingLog(processingLog);
+
+                return bill;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching bill by ID: " + e.getMessage());
+        }
+        return null;
+    }
+
     /**
      * Deletes a bill from the database by its ID.
      * @param billId The ID of the bill to delete.

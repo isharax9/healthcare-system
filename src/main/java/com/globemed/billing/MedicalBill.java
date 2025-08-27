@@ -56,6 +56,10 @@ public class MedicalBill {
     }
 
     public String getServiceDescription() {
-        return "";
+        return serviceDescription;
+    }
+
+    public void setProcessingLog(String log) {
+        this.processingLog = new StringBuilder(log);
     }
 }
