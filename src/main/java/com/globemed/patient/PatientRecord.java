@@ -35,6 +35,23 @@ public class PatientRecord implements Cloneable {
         this.treatmentPlans.add(plan);
     }
 
+    /**
+     * Replaces the entire medical history with a new one.
+     * @param medicalHistory The new list of medical history items.
+     */
+    public void setMedicalHistory(List<String> medicalHistory) {
+        // We create a new ArrayList to ensure our internal list is independent
+        this.medicalHistory = new ArrayList<>(medicalHistory);
+    }
+
+    /**
+     * Replaces the entire treatment plan list with a new one.
+     * @param treatmentPlans The new list of treatment plans.
+     */
+    public void setTreatmentPlans(List<String> treatmentPlans) {
+        this.treatmentPlans = new ArrayList<>(treatmentPlans);
+    }
+
     // --- Memento Pattern Methods ---
 
     /**

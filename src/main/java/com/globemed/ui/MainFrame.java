@@ -1,11 +1,9 @@
 package com.globemed.ui;
 
-import javax.swing.*;
-import java.awt.*;
+import com.globemed.controller.PatientController;
 
-/**
- * The main window (View) of our application.
- */
+import javax.swing.*;
+
 public class MainFrame extends JFrame {
 
     public MainFrame() {
@@ -14,15 +12,26 @@ public class MainFrame extends JFrame {
         setSize(800, 600);
         setLocationRelativeTo(null); // Center the window
 
-        // Create a simple panel with a welcome message
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BorderLayout());
+        JTabbedPane tabbedPane = new JTabbedPane();
 
-        JLabel welcomeLabel = new JLabel("Welcome to GlobeMed HMS", SwingConstants.CENTER);
-        welcomeLabel.setFont(new Font("Serif", Font.BOLD, 24));
-        mainPanel.add(welcomeLabel, BorderLayout.CENTER);
+        // --- Patient Management Tab ---
+        PatientPanel patientPanel = new PatientPanel();
+        // The controller is created but not stored as a field here,
+        // as its job is to just wire up the components. The listeners it sets
+        // will keep it from being garbage collected.
+        new PatientController(patientPanel);
 
-        // Add the panel to the frame
-        add(mainPanel);
+        tabbedPane.addTab("Patient Management", patientPanel);
+
+        // --- Add other tabs here later for Appointment, Billing, etc. ---
+        JPanel appointmentPanel = new JPanel();
+        appointmentPanel.add(new JLabel("Appointment Scheduling UI will go here."));
+        tabbedPane.addTab("Appointments", appointmentPanel);
+
+        JPanel billingPanel = new JPanel();
+        billingPanel.add(new JLabel("Billing and Claims UI will go here."));
+        tabbedPane.addTab("Billing", billingPanel);
+
+        add(tabbedPane);
     }
 }
