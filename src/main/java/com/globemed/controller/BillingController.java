@@ -3,14 +3,17 @@ package com.globemed.controller;
 import com.globemed.billing.*;
 import com.globemed.ui.BillingPanel;
 import javax.swing.JOptionPane;
+import com.globemed.db.PatientDAO;
 
 public class BillingController {
 
     private final BillingPanel view;
     private final BillingHandler billProcessingChain;
+    private final PatientDAO patientDAO;
 
     public BillingController(BillingPanel view) {
         this.view = view;
+        this.patientDAO = new PatientDAO();
         // This is where we assemble our Chain of Responsibility
         this.billProcessingChain = setupChain();
         initController();
@@ -46,12 +49,19 @@ public class BillingController {
      */
     private void processBill() {
         // 1. Get data from the view
-        String patientId = view.patientIdField.getText();
+        String patientId = view.patientIdField.getText().trim();
+        // ... (rest of the data fetching is the same)
         String service = view.serviceField.getText();
         String amountStr = view.amountField.getText();
         String insurance = view.insuranceField.getText();
 
-        // 2. Validate UI input before creating the object
+        // 2. NEW: Pre-validation Step
+        if (patientDAO.getPatientById(patientId) == null) {
+            JOptionPane.showMessageDialog(view, "Patient with ID '" + patientId + "' not found.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return; // Stop immediately
+        }
+
+        // 3. Validate UI input (same as before)
         double amount;
         try {
             amount = Double.parseDouble(amountStr);
@@ -60,15 +70,15 @@ public class BillingController {
             return;
         }
 
-        // 3. Create the MedicalBill object
+        // 4. Create the MedicalBill object (same as before)
         MedicalBill bill = new MedicalBill(patientId, service, amount, insurance);
 
-        // 4. Start the processing by passing the bill to the first handler
+        // 5. Start the processing (same as before)
         System.out.println("\n--- Starting New Bill Processing ---");
         billProcessingChain.processBill(bill);
         System.out.println("--- Bill Processing Finished ---");
 
-        // 5. Update the UI with the final results from the processed bill object
+        // 6. Update the UI (same as before)
         view.setStatus(bill.getStatus());
         view.setLog(bill.getProcessingLog());
     }
