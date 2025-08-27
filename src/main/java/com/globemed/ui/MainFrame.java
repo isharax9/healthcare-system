@@ -2,6 +2,7 @@ package com.globemed.ui;
 
 import com.globemed.controller.AppointmentController;
 import com.globemed.controller.PatientController;
+import com.globemed.controller.BillingController;
 
 import javax.swing.*;
 
@@ -26,11 +27,10 @@ public class MainFrame extends JFrame {
         tabbedPane.addTab("Appointments", appointmentPanel);
 
 
-        // --- Billing Tab (Still a placeholder) ---
-        JPanel billingPanel = new JPanel();
-        billingPanel.add(new JLabel("Billing and Claims UI will go here."));
+        // --- Billing Tab (THIS IS THE NEW SECTION) ---
+        BillingPanel billingPanel = new BillingPanel();
+        new BillingController(billingPanel); // Create the controller to make it functional
         tabbedPane.addTab("Billing", billingPanel);
 
-        add(tabbedPane);
-    }
+        add(tabbedPane);    }
 }
