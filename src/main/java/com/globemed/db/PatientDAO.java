@@ -71,5 +71,53 @@ public class PatientDAO {
         return false;
     }
 
-    // You can also add methods for createPatient and deletePatient here later.
+    /**
+     * Creates a new patient record in the database.
+     * @param record The PatientRecord object to create.
+     * @return true if the creation was successful, false otherwise.
+     */
+    public boolean createPatient(PatientRecord record) {
+        // Check if a patient with this ID already exists to prevent primary key errors
+        if (getPatientById(record.getPatientId()) != null) {
+            System.err.println("Error: Patient with ID " + record.getPatientId() + " already exists.");
+            return false;
+        }
+
+        String sql = "INSERT INTO patients (patient_id, full_name, medical_history, treatment_plans) VALUES (?, ?, ?, ?)";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, record.getPatientId());
+            pstmt.setString(2, record.getName());
+            String historyStr = String.join("\n", record.getMedicalHistory());
+            String plansStr = String.join("\n", record.getTreatmentPlans());
+            pstmt.setString(3, historyStr);
+            pstmt.setString(4, plansStr);
+
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            System.err.println("Error creating patient: " + e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * Deletes a patient from the database by their ID.
+     * @param patientId The ID of the patient to delete.
+     * @return true if the deletion was successful, false otherwise.
+     */
+    public boolean deletePatient(String patientId) {
+        String sql = "DELETE FROM patients WHERE patient_id = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, patientId);
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            System.err.println("Error deleting patient: " + e.getMessage());
+        }
+        return false;
+    }
 }

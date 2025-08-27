@@ -2,6 +2,7 @@ package com.globemed.ui;
 
 import javax.swing.*;
 import java.awt.*;
+import java.text.BreakIterator;
 import java.util.Arrays;
 // Make sure this specific import is present
 import java.util.List;
@@ -21,6 +22,8 @@ public class PatientPanel extends JPanel {
     public final JButton editButton = new JButton("Edit");
     public final JButton saveButton = new JButton("Save");
     public final JButton undoButton = new JButton("Undo");
+    public final JButton newButton = new JButton("New");
+    public final JButton deleteButton = new JButton("Delete");
 
     public PatientPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -101,8 +104,10 @@ public class PatientPanel extends JPanel {
 
         // --- Actions Panel (Bottom) ---
         JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        actionsPanel.add(newButton);
         actionsPanel.add(editButton);
         actionsPanel.add(saveButton);
+        actionsPanel.add(deleteButton);
         actionsPanel.add(undoButton);
         add(actionsPanel, BorderLayout.SOUTH);
 
@@ -112,6 +117,7 @@ public class PatientPanel extends JPanel {
         saveButton.setEnabled(false);
         undoButton.setEnabled(false);
         editButton.setEnabled(false);
+        deleteButton.setEnabled(false); // Can't delete until a patient is loaded
     }
 
     // --- Public methods for the Controller to interact with the View ---
@@ -149,15 +155,21 @@ public class PatientPanel extends JPanel {
     }
 
     public void setFieldsEditable(boolean editable) {
+        // The Patient ID is only editable if we are in "new patient" mode.
+        // The controller will handle enabling/disabling it separately.
         patientNameField.setEditable(editable);
         medicalHistoryArea.setEditable(editable);
         treatmentPlansArea.setEditable(editable);
 
-        // Toggle button states based on edit mode
         saveButton.setEnabled(editable);
         undoButton.setEnabled(editable);
-        // Only enable edit if a patient is loaded
         editButton.setEnabled(!editable && !patientIdField.getText().isEmpty());
+        deleteButton.setEnabled(!editable && !patientIdField.getText().isEmpty());
+    }
+
+    // Add a specific method to control the ID field's state
+    public void setPatientIdEditable(boolean editable) {
+        patientIdField.setEditable(editable);
     }
 
     public void clearFields() {
@@ -167,4 +179,6 @@ public class PatientPanel extends JPanel {
         medicalHistoryArea.setText("");
         treatmentPlansArea.setText("");
     }
+
+    public JTextField getPatientId() { return patientIdField; }
 }
