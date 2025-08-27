@@ -6,6 +6,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BillingDAO {
 
@@ -58,5 +60,56 @@ public class BillingDAO {
             System.err.println("Error saving bill: " + e.getMessage());
         }
         return -1; // Indicate failure
+    }
+
+    /**
+     * Searches for all bills associated with a given patient ID.
+     * @param patientId The ID of the patient to search for.
+     * @return A list of MedicalBill objects.
+     */
+    public List<MedicalBill> getBillsByPatientId(String patientId) {
+        List<MedicalBill> bills = new ArrayList<>();
+        String sql = "SELECT * FROM billing WHERE patient_id = ? ORDER BY bill_id DESC";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, patientId);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                MedicalBill bill = new MedicalBill(
+                        rs.getString("patient_id"),
+                        rs.getString("service_description"),
+                        rs.getDouble("amount"),
+                        rs.getString("insurance_policy_number")
+                );
+                bill.setBillId(rs.getInt("bill_id"));
+                bill.setStatus(rs.getString("status"));
+                // We don't load the full log here to keep the list view fast,
+                // but we could if desired.
+                bills.add(bill);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching bills by patient ID: " + e.getMessage());
+        }
+        return bills;
+    }
+
+    /**
+     * Deletes a bill from the database by its ID.
+     * @param billId The ID of the bill to delete.
+     * @return true if deletion was successful, false otherwise.
+     */
+    public boolean deleteBill(int billId) {
+        String sql = "DELETE FROM billing WHERE bill_id = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, billId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error deleting bill: " + e.getMessage());
+        }
+        return false;
     }
 }
