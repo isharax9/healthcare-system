@@ -7,73 +7,69 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.time.format.DateTimeFormatter;
+import java.util.List; // Ensure java.util.List is imported
 
 public class AppointmentPanel extends JPanel {
 
     // --- Components ---
-    // Make these public so the controller can access them
+    public final JList<Doctor> doctorList = new JList<>();
+    public final JSpinner dateSpinner = new JSpinner(new SpinnerDateModel());
+    public final JButton viewScheduleButton = new JButton("View Schedule"); // New button
+    public final JList<Appointment> appointmentsList = new JList<>(); // Changed to hold Appointment objects
+    public final JTextField patientIdField = new JTextField(10);
+    public final JSpinner timeSpinner = new JSpinner(new SpinnerDateModel());
+    public final JTextField reasonField = new JTextField(20);
+    public final JButton bookAppointmentButton = new JButton("Book Appointment");
+    public final JButton updateAppointmentButton = new JButton("Update Selected"); // New button
+    public final JButton cancelAppointmentButton = new JButton("Cancel Selected"); // New button
 
-    // Doctor selection
-    public final JList<Doctor> doctorList = new JList<>(); // <-- FIX
-
-    // Date selection
-    public final JSpinner dateSpinner = new JSpinner(new SpinnerDateModel()); // <-- FIX
-
-    // Display existing appointments
-    public final JList<String> appointmentsList = new JList<>(); // <-- FIX
-
-    // New appointment booking
-    public final JTextField patientIdField = new JTextField(10); // <-- FIX
-    public final JSpinner timeSpinner = new JSpinner(new SpinnerDateModel()); // <-- FIX
-    public final JTextField reasonField = new JTextField(20); // <-- FIX
-    public final JButton bookAppointmentButton = new JButton("Book Appointment"); // <-- FIX
-
-    // Status display
-    public final JLabel statusLabel = new JLabel("Please select a doctor and date to view their schedule."); // <-- FIX
-
-    // The rest of the file remains exactly the same.
-    // ... constructor and methods ...
     public AppointmentPanel() {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // --- 1. West Panel: Doctor List ---
+        // --- West Panel: Doctor List ---
         JPanel doctorPanel = new JPanel(new BorderLayout());
-        doctorPanel.setBorder(new TitledBorder("Select Doctor"));
+        doctorPanel.setBorder(new TitledBorder("1. Select Doctor"));
         doctorList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         doctorPanel.add(new JScrollPane(doctorList), BorderLayout.CENTER);
         add(doctorPanel, BorderLayout.WEST);
 
-        // --- 2. Center Panel: Main content ---
+        // --- Center Panel: Main content ---
         JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
         add(centerPanel, BorderLayout.CENTER);
 
-        // --- 2a. North of Center: Date Selection ---
+        // --- Date Selection & Action Panel ---
         JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        datePanel.setBorder(new TitledBorder("Select Date"));
+        datePanel.setBorder(new TitledBorder("2. Select Date & View"));
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd");
         dateSpinner.setEditor(dateEditor);
-        dateSpinner.setValue(new java.util.Date()); // Set to today's date
+        dateSpinner.setValue(new java.util.Date());
         datePanel.add(dateSpinner);
+        datePanel.add(viewScheduleButton);
         centerPanel.add(datePanel, BorderLayout.NORTH);
 
-        // --- 2b. Center of Center: Existing Appointments ---
-        JPanel schedulePanel = new JPanel(new BorderLayout());
-        schedulePanel.setBorder(new TitledBorder("Scheduled Appointments for Selected Date"));
+        // --- Schedule Display Panel with action buttons ---
+        JPanel schedulePanel = new JPanel(new BorderLayout(0, 5));
+        schedulePanel.setBorder(new TitledBorder("3. Schedule & Actions"));
         schedulePanel.add(new JScrollPane(appointmentsList), BorderLayout.CENTER);
+        // Custom renderer to display appointment info nicely
+        appointmentsList.setCellRenderer(new AppointmentListRenderer());
+
+        JPanel scheduleActions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        scheduleActions.add(updateAppointmentButton);
+        scheduleActions.add(cancelAppointmentButton);
+        schedulePanel.add(scheduleActions, BorderLayout.SOUTH);
         centerPanel.add(schedulePanel, BorderLayout.CENTER);
 
-        // --- 2c. South of Center: Booking Form ---
+        // --- Booking Form ---
         JPanel bookingPanel = new JPanel(new GridBagLayout());
-        bookingPanel.setBorder(new TitledBorder("Book a New Appointment"));
+        bookingPanel.setBorder(new TitledBorder("4. Book a New Appointment"));
+        // (GridBagLayout code is the same as before)
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.anchor = GridBagConstraints.WEST;
-
-        // Configure time spinner for time only
         JSpinner.DateEditor timeEditor = new JSpinner.DateEditor(timeSpinner, "HH:mm");
         timeSpinner.setEditor(timeEditor);
-
         gbc.gridx = 0; gbc.gridy = 0; bookingPanel.add(new JLabel("Patient ID:"), gbc);
         gbc.gridx = 1; gbc.gridy = 0; bookingPanel.add(patientIdField, gbc);
         gbc.gridx = 0; gbc.gridy = 1; bookingPanel.add(new JLabel("Time (HH:mm):"), gbc);
@@ -81,39 +77,44 @@ public class AppointmentPanel extends JPanel {
         gbc.gridx = 2; gbc.gridy = 0; bookingPanel.add(new JLabel("Reason:"), gbc);
         gbc.gridx = 3; gbc.gridy = 0; gbc.gridwidth = 2; bookingPanel.add(reasonField, gbc);
         gbc.gridx = 3; gbc.gridy = 1; gbc.gridwidth = 2; bookingPanel.add(bookAppointmentButton, gbc);
-
         centerPanel.add(bookingPanel, BorderLayout.SOUTH);
 
-        // --- 3. South Panel: Status Label ---
-        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        statusPanel.add(statusLabel);
-        add(statusPanel, BorderLayout.SOUTH);
+        // Initial state
+        updateAppointmentButton.setEnabled(false);
+        cancelAppointmentButton.setEnabled(false);
     }
 
-    // ... rest of the methods are unchanged ...
-    public void setDoctorList(java.util.List<Doctor> doctors) {
+    public void setDoctorList(List<Doctor> doctors) {
         DefaultListModel<Doctor> model = new DefaultListModel<>();
-        for (Doctor doctor : doctors) {
-            model.addElement(doctor);
-        }
+        doctors.forEach(model::addElement);
         doctorList.setModel(model);
     }
 
-    public void setAppointmentsList(java.util.List<Appointment> appointments) {
-        DefaultListModel<String> model = new DefaultListModel<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+    public void setAppointmentsList(List<Appointment> appointments) {
+        DefaultListModel<Appointment> model = new DefaultListModel<>();
         if (appointments.isEmpty()) {
-            model.addElement("No appointments scheduled for this day.");
+            // Handle display for an empty list if needed, or JList shows up empty
         } else {
-            for (Appointment appt : appointments) {
-                String display = String.format("%s - Patient: %s, Reason: %s",
-                        appt.getAppointmentDateTime().format(formatter),
-                        appt.getPatientId(),
-                        appt.getReason()
-                );
-                model.addElement(display);
-            }
+            appointments.forEach(model::addElement);
         }
         appointmentsList.setModel(model);
+    }
+
+    // Custom renderer class to make the JList<Appointment> display readable text
+    private static class AppointmentListRenderer extends DefaultListCellRenderer {
+        private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+
+        @Override
+        public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            if (value instanceof Appointment) {
+                Appointment appt = (Appointment) value;
+                setText(String.format("%s - Patient: %s, Reason: %s",
+                        appt.getAppointmentDateTime().format(formatter),
+                        appt.getPatientId(),
+                        appt.getReason()));
+            }
+            return this;
+        }
     }
 }

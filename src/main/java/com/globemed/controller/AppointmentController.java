@@ -1,5 +1,6 @@
 package com.globemed.controller;
 
+import com.globemed.appointment.Appointment;
 import com.globemed.appointment.AppointmentScheduler;
 import com.globemed.appointment.Doctor;
 import com.globemed.db.SchedulingDAO;
@@ -13,11 +14,6 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 
-/**
- * The Controller for the Appointment Scheduling system.
- * It listens to user input from the View (AppointmentPanel) and uses the
- * Mediator (AppointmentScheduler) to perform actions.
- */
 public class AppointmentController {
     private final AppointmentPanel view;
     private final SchedulingDAO dao;
@@ -31,74 +27,107 @@ public class AppointmentController {
         loadInitialData();
     }
 
-    /**
-     * Wires up the listeners to the UI components.
-     */
     private void initController() {
-        // When the user selects a doctor or a date, update the schedule view
-        view.doctorList.addListSelectionListener(e -> updateAppointmentView());
-        view.dateSpinner.addChangeListener(e -> updateAppointmentView());
+        // Explicit action to view schedule
+        view.viewScheduleButton.addActionListener(e -> viewSchedule());
 
-        // When the user clicks the "Book" button
+        // CRUD actions
         view.bookAppointmentButton.addActionListener(e -> bookNewAppointment());
+        view.cancelAppointmentButton.addActionListener(e -> cancelAppointment());
+        view.updateAppointmentButton.addActionListener(e -> updateAppointment());
+
+        // Enable/disable update and cancel buttons based on selection
+        view.appointmentsList.addListSelectionListener(e -> {
+            boolean isSelected = view.appointmentsList.getSelectedValue() != null;
+            view.updateAppointmentButton.setEnabled(isSelected);
+            view.cancelAppointmentButton.setEnabled(isSelected);
+        });
     }
 
-    /**
-     * Loads the initial list of doctors into the UI.
-     */
     private void loadInitialData() {
-        List<Doctor> doctors = dao.getAllDoctors();
-        view.setDoctorList(doctors);
+        view.setDoctorList(dao.getAllDoctors());
     }
 
-    /**
-     * Fetches appointments for the selected doctor and date and updates the UI.
-     */
-    private void updateAppointmentView() {
+    private void viewSchedule() {
         Doctor selectedDoctor = view.doctorList.getSelectedValue();
-        Date selectedDate = (Date) view.dateSpinner.getValue();
-
-        if (selectedDoctor == null || selectedDate == null) {
-            return; // Do nothing if a doctor or date isn't selected
+        if (selectedDoctor == null) {
+            JOptionPane.showMessageDialog(view, "Please select a doctor first.", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
         }
-
+        Date selectedDate = (Date) view.dateSpinner.getValue();
         LocalDate localDate = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 
-        view.setAppointmentsList(dao.getAppointmentsForDoctorOnDate(selectedDoctor.getDoctorId(), localDate));
+        List<Appointment> appointments = dao.getAppointmentsForDoctorOnDate(selectedDoctor.getDoctorId(), localDate);
+        view.setAppointmentsList(appointments);
     }
 
-    /**
-     * Handles the logic for booking a new appointment.
-     */
     private void bookNewAppointment() {
-        // 1. Get all data from the view
+        // ... (This logic is the same as before)
         Doctor selectedDoctor = view.doctorList.getSelectedValue();
         String patientId = view.patientIdField.getText().trim();
         String reason = view.reasonField.getText().trim();
 
-        // 2. Validate input
-        if (selectedDoctor == null) {
-            JOptionPane.showMessageDialog(view, "Please select a doctor.", "Validation Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        if (patientId.isEmpty()) {
-            JOptionPane.showMessageDialog(view, "Please enter a Patient ID.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+        if (selectedDoctor == null || patientId.isEmpty()) {
+            JOptionPane.showMessageDialog(view, "Please select a doctor and enter a Patient ID.", "Validation Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // 3. Combine selected date and time into a single LocalDateTime object
         Date selectedDate = (Date) view.dateSpinner.getValue();
         Date selectedTime = (Date) view.timeSpinner.getValue();
-
         LocalDate datePart = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         LocalTime timePart = selectedTime.toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
         LocalDateTime requestedDateTime = LocalDateTime.of(datePart, timePart);
 
-        // 4. Call the Mediator to perform the booking logic
         String resultMessage = scheduler.bookAppointment(patientId, selectedDoctor, requestedDateTime, reason);
-
-        // 5. Display the result and refresh the view
         JOptionPane.showMessageDialog(view, resultMessage, "Booking Status", JOptionPane.INFORMATION_MESSAGE);
-        updateAppointmentView(); // Refresh the list of appointments
+        viewSchedule(); // Refresh view
+    }
+
+    private void cancelAppointment() {
+        Appointment selectedAppointment = view.appointmentsList.getSelectedValue();
+        if (selectedAppointment == null) return;
+
+        int choice = JOptionPane.showConfirmDialog(view,
+                "Are you sure you want to cancel this appointment?",
+                "Confirm Cancellation", JOptionPane.YES_NO_OPTION);
+
+        if (choice == JOptionPane.YES_OPTION) {
+            boolean success = dao.deleteAppointment(selectedAppointment.getAppointmentId());
+            if (success) {
+                JOptionPane.showMessageDialog(view, "Appointment canceled successfully.");
+            } else {
+                JOptionPane.showMessageDialog(view, "Failed to cancel appointment.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+            viewSchedule(); // Refresh view
+        }
+    }
+
+    private void updateAppointment() {
+        Appointment selectedAppointment = view.appointmentsList.getSelectedValue();
+        if (selectedAppointment == null) return;
+
+        // For simplicity, we'll just allow updating the reason via a dialog
+        String newReason = JOptionPane.showInputDialog(view, "Enter new reason for appointment:", selectedAppointment.getReason());
+
+        if (newReason != null && !newReason.trim().isEmpty()) {
+            // In a real app, you'd create a more complex dialog to change time, etc.
+            // Here we just update the reason on the existing appointment object
+            Appointment updatedAppointment = new Appointment(
+                    selectedAppointment.getPatientId(),
+                    selectedAppointment.getDoctorId(),
+                    selectedAppointment.getAppointmentDateTime(),
+                    newReason.trim()
+            );
+            updatedAppointment.setAppointmentId(selectedAppointment.getAppointmentId());
+            updatedAppointment.setStatus("Updated"); // Optionally update status
+
+            boolean success = dao.updateAppointment(updatedAppointment);
+            if (success) {
+                JOptionPane.showMessageDialog(view, "Appointment updated successfully.");
+            } else {
+                JOptionPane.showMessageDialog(view, "Failed to update appointment.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+            viewSchedule(); // Refresh view
+        }
     }
 }

@@ -69,4 +69,31 @@ public class SchedulingDAO {
             return false;
         }
     }
+
+    public boolean updateAppointment(Appointment appointment) {
+        String sql = "UPDATE appointments SET appointment_datetime = ?, reason = ?, status = ? WHERE appointment_id = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setTimestamp(1, Timestamp.valueOf(appointment.getAppointmentDateTime()));
+            pstmt.setString(2, appointment.getReason());
+            pstmt.setString(3, appointment.getStatus());
+            pstmt.setInt(4, appointment.getAppointmentId());
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating appointment: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean deleteAppointment(int appointmentId) {
+        String sql = "DELETE FROM appointments WHERE appointment_id = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, appointmentId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error deleting appointment: " + e.getMessage());
+            return false;
+        }
+    }
 }
