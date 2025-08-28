@@ -7,6 +7,7 @@ import com.globemed.db.PatientDAO;
 import com.globemed.patient.PatientRecord;
 import com.globemed.patient.RecordHistory;
 import com.globemed.ui.PatientPanel;
+import com.globemed.auth.IUser; // <-- Add import
 
 import javax.swing.*;
 import java.util.List;
@@ -15,14 +16,17 @@ public class PatientController {
     private final PatientPanel view;
     private final PatientDAO dao;
     private final InsuranceDAO insuranceDAO; // <-- ADDED
+    private final IUser currentUser; // <-- ADD THIS FIELD
     private PatientRecord currentPatient;
     private RecordHistory recordHistory;
     private boolean isNewPatientMode = false;
 
-    public PatientController(PatientPanel view) {
+    // MODIFY THE CONSTRUCTOR
+    public PatientController(PatientPanel view, IUser currentUser) {
         this.view = view;
         this.dao = new PatientDAO();
         this.insuranceDAO = new InsuranceDAO(); // <-- INITIALIZED
+        this.currentUser = currentUser; // <-- STORE THE USER
         initController();
         loadInitialData(); // <-- ADDED CALL
     }
@@ -58,10 +62,14 @@ public class PatientController {
             displayPatientData();
             view.setFieldsEditable(false);
             view.insurancePlanComboBox.setEnabled(false); // Explicitly disable
+            // Apply permission check to the delete button
+            view.deleteButton.setEnabled(currentUser.hasPermission("can_delete_patient"));
+            view.editButton.setEnabled(true);
         } else {
             JOptionPane.showMessageDialog(view, "Patient not found.", "Error", JOptionPane.ERROR_MESSAGE);
             view.clearFields();
             view.editButton.setEnabled(false);
+            view.deleteButton.setEnabled(false);
         }
     }
 
@@ -115,6 +123,7 @@ public class PatientController {
         }
     }
 
+    // MODIFY the prepareNewPatient method
     private void prepareNewPatient() {
         isNewPatientMode = true;
         currentPatient = null;
@@ -124,11 +133,18 @@ public class PatientController {
         view.setFieldsEditable(true);
         view.setPatientIdEditable(true);
         view.editButton.setEnabled(false);
-        view.deleteButton.setEnabled(false);
+        view.deleteButton.setEnabled(false); // Should always be false for a new patient
         view.undoButton.setEnabled(false);
     }
 
+    // MODIFY the deletePatient method
     private void deletePatient() {
+        // Add a permission check at the very beginning
+        if (!currentUser.hasPermission("can_delete_patient")) {
+            JOptionPane.showMessageDialog(view, "You do not have permission to delete patient records.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
         if (currentPatient == null) return;
 
         int response = JOptionPane.showConfirmDialog(

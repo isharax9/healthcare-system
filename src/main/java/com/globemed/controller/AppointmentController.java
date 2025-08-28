@@ -3,6 +3,7 @@ package com.globemed.controller;
 import com.globemed.appointment.Appointment;
 import com.globemed.appointment.AppointmentScheduler;
 import com.globemed.appointment.Doctor;
+import com.globemed.auth.IUser; // <-- Add import
 import com.globemed.db.SchedulingDAO;
 import com.globemed.ui.AppointmentPanel;
 
@@ -18,11 +19,14 @@ public class AppointmentController {
     private final AppointmentPanel view;
     private final SchedulingDAO dao;
     private final AppointmentScheduler scheduler; // The Mediator
+    private final IUser currentUser; // <-- ADD THIS FIELD
 
-    public AppointmentController(AppointmentPanel view) {
+    // MODIFY THE CONSTRUCTOR
+    public AppointmentController(AppointmentPanel view, IUser currentUser) {
         this.view = view;
         this.dao = new SchedulingDAO();
         this.scheduler = new AppointmentScheduler();
+        this.currentUser = currentUser; // <-- STORE THE USER
         initController();
         loadInitialData();
     }
@@ -36,11 +40,12 @@ public class AppointmentController {
         view.cancelAppointmentButton.addActionListener(e -> cancelAppointment());
         view.updateAppointmentButton.addActionListener(e -> updateAppointment());
 
-        // Enable/disable update and cancel buttons based on selection
+        // MODIFY the selection listener
         view.appointmentsList.addListSelectionListener(e -> {
             boolean isSelected = view.appointmentsList.getSelectedValue() != null;
             view.updateAppointmentButton.setEnabled(isSelected);
-            view.cancelAppointmentButton.setEnabled(isSelected);
+            // Apply permission check to the cancel button
+            view.cancelAppointmentButton.setEnabled(isSelected && currentUser.hasPermission("can_delete_appointment"));
         });
     }
 
@@ -83,7 +88,14 @@ public class AppointmentController {
         viewSchedule(); // Refresh view
     }
 
+    // MODIFY the cancelAppointment method
     private void cancelAppointment() {
+        // Add a permission check at the very beginning
+        if (!currentUser.hasPermission("can_delete_appointment")) {
+            JOptionPane.showMessageDialog(view, "You do not have permission to cancel appointments.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
         Appointment selectedAppointment = view.appointmentsList.getSelectedValue();
         if (selectedAppointment == null) return;
 

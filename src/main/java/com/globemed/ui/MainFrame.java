@@ -29,21 +29,24 @@ public class MainFrame extends JFrame {
         // Only add the Patient Management tab if the user has permission
         if (currentUser.hasPermission("can_access_patients")) {
             PatientPanel patientPanel = new PatientPanel();
-            new PatientController(patientPanel);
+            // Pass the currentUser to the controller
+            new PatientController(patientPanel, currentUser);
             tabbedPane.addTab("Patient Management", patientPanel);
         }
 
         // Only add the Appointments tab if the user has permission
         if (currentUser.hasPermission("can_access_appointments")) {
             AppointmentPanel appointmentPanel = new AppointmentPanel();
-            new AppointmentController(appointmentPanel);
+            // Pass the currentUser to the controller
+            new AppointmentController(appointmentPanel, currentUser);
             tabbedPane.addTab("Appointments", appointmentPanel);
         }
 
         // Only add the Billing tab if the user has permission (typically Admins)
         if (currentUser.hasPermission("can_access_billing")) {
             BillingPanel billingPanel = new BillingPanel();
-            new BillingController(billingPanel);
+            // Pass the currentUser to the controller
+            new BillingController(billingPanel, currentUser);
             tabbedPane.addTab("Billing", billingPanel);
         }
 

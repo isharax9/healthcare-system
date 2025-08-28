@@ -10,6 +10,7 @@ import com.globemed.billing.*;
 import com.globemed.db.BillingDAO;
 import com.globemed.db.PatientDAO;
 import com.globemed.ui.BillingPanel;
+import com.globemed.auth.IUser; // <-- Add import
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.List;
@@ -19,15 +20,18 @@ public class BillingController {
     private final BillingPanel view;
     private final BillingDAO billingDAO;
     private final PatientDAO patientDAO;
-    private final InsuranceDAO insuranceDAO; // <-- ADDED THIS FIELD
+    private final InsuranceDAO insuranceDAO;
     private final BillingHandler billProcessingChain;
+    private final IUser currentUser; // <-- ADD THIS FIELD
     private List<MedicalBill> currentBills; // To hold the search results
 
-    public BillingController(BillingPanel view) {
+    // MODIFY THE CONSTRUCTOR
+    public BillingController(BillingPanel view, IUser currentUser) {
         this.view = view;
         this.billingDAO = new BillingDAO();
         this.patientDAO = new PatientDAO();
-        this.insuranceDAO = new InsuranceDAO(); // <-- INITIALIZED IT
+        this.insuranceDAO = new InsuranceDAO();
+        this.currentUser = currentUser; // <-- STORE THE USER
         this.billProcessingChain = setupChain();
         initController();
     }
@@ -46,13 +50,15 @@ public class BillingController {
         view.searchBillsButton.addActionListener(e -> searchBills());
         view.deleteBillButton.addActionListener(e -> deleteBill());
         view.printBillButton.addActionListener(e -> printBill());
-        view.viewLogButton.addActionListener(e -> viewLog()); // Listener was already here, confirming it stays
+        view.viewLogButton.addActionListener(e -> viewLog());
 
+        // MODIFY the selection listener
         view.billsTable.getSelectionModel().addListSelectionListener(e -> {
             boolean rowSelected = view.billsTable.getSelectedRow() != -1;
-            view.deleteBillButton.setEnabled(rowSelected);
+            // Apply permission check to the delete button
+            view.deleteBillButton.setEnabled(rowSelected && currentUser.hasPermission("can_delete_bill"));
             view.printBillButton.setEnabled(rowSelected);
-            view.viewLogButton.setEnabled(rowSelected); // Line was already here, confirming it stays
+            view.viewLogButton.setEnabled(rowSelected);
         });
     }
 
@@ -83,7 +89,14 @@ public class BillingController {
         view.billsTable.setModel(model);
     }
 
+    // MODIFY the deleteBill method
     private void deleteBill() {
+        // Add a permission check at the very beginning
+        if (!currentUser.hasPermission("can_delete_bill")) {
+            JOptionPane.showMessageDialog(view, "You do not have permission to delete bills.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
         int selectedRow = view.billsTable.getSelectedRow();
         if (selectedRow == -1) return;
 
@@ -103,7 +116,6 @@ public class BillingController {
         }
     }
 
-    // --- REPLACED the printBill method with this new version ---
     private void printBill() {
         int selectedRow = view.billsTable.getSelectedRow();
         if (selectedRow == -1) return;
@@ -112,12 +124,8 @@ public class BillingController {
         PatientRecord patient = patientDAO.getPatientById(selectedBill.getPatientId());
 
         if (patient != null) {
-            // 1. Fetch the list of all insurance plans
             List<InsurancePlan> allPlans = insuranceDAO.getAllPlans();
-
-            // 2. Pass the list to the printer
             BillPrinter.printBill(selectedBill, patient, allPlans);
-
             JOptionPane.showMessageDialog(view, "Bill PDF has been generated in the project folder.", "Success", JOptionPane.INFORMATION_MESSAGE);
         } else {
             JOptionPane.showMessageDialog(view, "Could not find patient data to generate the bill.", "Error", JOptionPane.ERROR_MESSAGE);
