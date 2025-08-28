@@ -17,5 +17,5 @@ public interface BillingHandler {
      * @param bill The bill to be processed.
      * @return true if the processing can continue, false if the chain should stop.
      */
-    boolean processBill(MedicalBill bill);
+    boolean processBill(BillProcessingRequest request);
 }

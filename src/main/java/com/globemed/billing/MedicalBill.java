@@ -1,23 +1,26 @@
 package com.globemed.billing;
 
+import com.globemed.insurance.InsurancePlan; // Import this
+
 public class MedicalBill {
     private int billId;
     private final String patientId;
     private final String serviceDescription;
     private final double amount;
-    private String insurancePolicyNumber; // Can be null
 
-    // These fields will be modified by the handlers
+    // This will be populated by the InsuranceHandler
+    private InsurancePlan appliedInsurancePlan;
+
     private String status;
     private StringBuilder processingLog;
     private double amountPaidByInsurance = 0.0;
-    private double amountPaidByPatient = 0.0;
+    private double finalAmount; // New field
 
-    public MedicalBill(String patientId, String serviceDescription, double amount, String insurancePolicyNumber) {
+    // Constructor no longer needs insurancePolicyNumber
+    public MedicalBill(String patientId, String serviceDescription, double amount) {
         this.patientId = patientId;
         this.serviceDescription = serviceDescription;
         this.amount = amount;
-        this.insurancePolicyNumber = insurancePolicyNumber;
         this.status = "New";
         this.processingLog = new StringBuilder("Bill created.\n");
     }
@@ -26,40 +29,22 @@ public class MedicalBill {
     public int getBillId() { return billId; }
     public String getPatientId() { return patientId; }
     public double getAmount() { return amount; }
-    public String getInsurancePolicyNumber() { return insurancePolicyNumber; }
+    public InsurancePlan getAppliedInsurancePlan() { return appliedInsurancePlan; }
     public String getStatus() { return status; }
     public String getProcessingLog() { return processingLog.toString(); }
-    public boolean hasInsurance() {
-        return insurancePolicyNumber != null && !insurancePolicyNumber.trim().isEmpty();
-    }
-    public double getRemainingBalance() {
-        return amount - amountPaidByInsurance - amountPaidByPatient;
-    }
+    public double getRemainingBalance() { return amount - amountPaidByInsurance; }
+    public double getFinalAmount() { return finalAmount; }
 
-    // --- Setters and Modifiers used by Handlers ---
+    // --- Setters and Modifiers ---
     public void setBillId(int billId) { this.billId = billId; }
     public void setStatus(String status) { this.status = status; }
-    public void addLog(String logEntry) {
-        this.processingLog.append("- ").append(logEntry).append("\n");
-    }
-    public void applyInsurancePayment(double amount) {
-        this.amountPaidByInsurance += amount;
-    }
-    public void applyPatientPayment(double amount) {
-        this.amountPaidByPatient += amount;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("Bill #%d for %s (%.2f) - Status: %s",
-                billId, patientId, amount, status);
-    }
+    public void addLog(String logEntry) { this.processingLog.append("- ").append(logEntry).append("\n"); }
+    public void applyInsurancePayment(double amount) { this.amountPaidByInsurance += amount; }
+    public void setProcessingLog(String log) { this.processingLog = new StringBuilder(log); }
+    public void setAppliedInsurancePlan(InsurancePlan plan) { this.appliedInsurancePlan = plan; }
+    public void setFinalAmount(double finalAmount) { this.finalAmount = finalAmount; }
 
     public String getServiceDescription() {
         return serviceDescription;
-    }
-
-    public void setProcessingLog(String log) {
-        this.processingLog = new StringBuilder(log);
     }
 }

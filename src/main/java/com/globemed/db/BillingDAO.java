@@ -18,28 +18,30 @@ public class BillingDAO {
      * @param bill The MedicalBill object to save.
      * @return The billId of the saved bill, or -1 on failure.
      */
+    // REPLACE saveBill
     public int saveBill(MedicalBill bill) {
-        // We will use a single, slightly more complex query that handles both cases
-        // This is called an "UPSERT" (Update or Insert)
-        String sql = "INSERT INTO billing (bill_id, patient_id, service_description, amount, insurance_policy_number, status, processing_log) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?) " +
+        String sql = "INSERT INTO billing (bill_id, patient_id, service_description, amount, status, processing_log, final_amount, insurance_policy_number) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
                 "ON DUPLICATE KEY UPDATE " +
-                "status = VALUES(status), processing_log = VALUES(processing_log)";
+                "status = VALUES(status), processing_log = VALUES(processing_log), final_amount = VALUES(final_amount)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            if (bill.getBillId() == 0) { // New Bill
-                pstmt.setNull(1, java.sql.Types.INTEGER); // Let the DB generate the ID
-            } else { // Existing Bill
+            if (bill.getBillId() == 0) {
+                pstmt.setNull(1, java.sql.Types.INTEGER);
+            } else {
                 pstmt.setInt(1, bill.getBillId());
             }
             pstmt.setString(2, bill.getPatientId());
             pstmt.setString(3, bill.getServiceDescription());
             pstmt.setDouble(4, bill.getAmount());
-            pstmt.setString(5, bill.getInsurancePolicyNumber());
-            pstmt.setString(6, bill.getStatus());
-            pstmt.setString(7, bill.getProcessingLog());
+            pstmt.setString(5, bill.getStatus());
+            pstmt.setString(6, bill.getProcessingLog());
+            pstmt.setDouble(7, bill.getFinalAmount());
+            // Store the plan name for historical record
+            pstmt.setString(8, bill.getAppliedInsurancePlan() != null ? bill.getAppliedInsurancePlan().getPlanName() : null);
+
 
             int affectedRows = pstmt.executeUpdate();
 
@@ -67,6 +69,7 @@ public class BillingDAO {
      * @param patientId The ID of the patient to search for.
      * @return A list of MedicalBill objects.
      */
+    // REPLACE getBillsByPatientId
     public List<MedicalBill> getBillsByPatientId(String patientId) {
         List<MedicalBill> bills = new ArrayList<>();
         String sql = "SELECT * FROM billing WHERE patient_id = ? ORDER BY bill_id DESC";
@@ -80,13 +83,11 @@ public class BillingDAO {
                 MedicalBill bill = new MedicalBill(
                         rs.getString("patient_id"),
                         rs.getString("service_description"),
-                        rs.getDouble("amount"),
-                        rs.getString("insurance_policy_number")
+                        rs.getDouble("amount")
                 );
                 bill.setBillId(rs.getInt("bill_id"));
                 bill.setStatus(rs.getString("status"));
-                // We don't load the full log here to keep the list view fast,
-                // but we could if desired.
+                bill.setFinalAmount(rs.getDouble("final_amount")); // <-- ADD THIS
                 bills.add(bill);
             }
         } catch (SQLException e) {
@@ -95,6 +96,7 @@ public class BillingDAO {
         return bills;
     }
 
+    // REPLACE getBillById
     public MedicalBill getBillById(int billId) {
         String sql = "SELECT * FROM billing WHERE bill_id = ?";
         try (Connection conn = DatabaseManager.getConnection();
@@ -107,17 +109,12 @@ public class BillingDAO {
                 MedicalBill bill = new MedicalBill(
                         rs.getString("patient_id"),
                         rs.getString("service_description"),
-                        rs.getDouble("amount"),
-                        rs.getString("insurance_policy_number")
+                        rs.getDouble("amount")
                 );
                 bill.setBillId(rs.getInt("bill_id"));
                 bill.setStatus(rs.getString("status"));
-
-                // This is the important part: we load the full log
-                String processingLog = rs.getString("processing_log");
-                // We need a way to set the log in the MedicalBill object
-                bill.setProcessingLog(processingLog);
-
+                bill.setFinalAmount(rs.getDouble("final_amount"));
+                bill.setProcessingLog(rs.getString("processing_log") != null ? rs.getString("processing_log") : "");
                 return bill;
             }
         } catch (SQLException e) {

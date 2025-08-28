@@ -12,7 +12,8 @@ public class ValidationHandler implements BillingHandler {
     }
 
     @Override
-    public boolean processBill(MedicalBill bill) {
+    public boolean processBill(BillProcessingRequest request) {
+        MedicalBill bill = request.getBill(); // Get the bill from the request
         System.out.println("ValidationHandler: Checking bill for patient " + bill.getPatientId());
 
         // Rule 1: Amount must be greater than zero
@@ -38,7 +39,7 @@ public class ValidationHandler implements BillingHandler {
 
         // Pass to the next handler if it exists
         if (next != null) {
-            return next.processBill(bill);
+            return next.processBill(request); // Pass the original request object
         }
 
         return true; // End of this path in the chain

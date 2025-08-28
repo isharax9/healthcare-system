@@ -21,10 +21,13 @@ public class FinalBillingHandler implements BillingHandler {
     }
 
     @Override
-    public boolean processBill(MedicalBill bill) {
+    public boolean processBill(BillProcessingRequest request) {
+        MedicalBill bill = request.getBill();
         System.out.println("FinalBillingHandler: Finalizing and saving bill for patient " + bill.getPatientId());
 
         double remainingBalance = bill.getRemainingBalance();
+
+        bill.setFinalAmount(remainingBalance); // <-- SET THE FINAL AMOUNT
 
         if (remainingBalance <= 0) {
             bill.setStatus("Closed - Fully Paid");

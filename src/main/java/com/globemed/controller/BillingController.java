@@ -1,5 +1,11 @@
 package com.globemed.controller;
 
+// Add these imports
+import com.globemed.billing.BillProcessingRequest;
+import com.globemed.db.InsuranceDAO;
+import com.globemed.insurance.InsurancePlan;
+import com.globemed.patient.PatientRecord;
+import com.globemed.utils.BillPrinter;
 import com.globemed.billing.*;
 import com.globemed.db.BillingDAO;
 import com.globemed.db.PatientDAO;
@@ -13,6 +19,7 @@ public class BillingController {
     private final BillingPanel view;
     private final BillingDAO billingDAO;
     private final PatientDAO patientDAO;
+    private final InsuranceDAO insuranceDAO; // <-- ADDED THIS FIELD
     private final BillingHandler billProcessingChain;
     private List<MedicalBill> currentBills; // To hold the search results
 
@@ -20,12 +27,12 @@ public class BillingController {
         this.view = view;
         this.billingDAO = new BillingDAO();
         this.patientDAO = new PatientDAO();
+        this.insuranceDAO = new InsuranceDAO(); // <-- INITIALIZED IT
         this.billProcessingChain = setupChain();
         initController();
     }
 
     private BillingHandler setupChain() {
-        // ... (this method is unchanged)
         BillingHandler validationHandler = new ValidationHandler();
         BillingHandler insuranceHandler = new InsuranceHandler();
         BillingHandler finalBillingHandler = new FinalBillingHandler();
@@ -35,17 +42,17 @@ public class BillingController {
     }
 
     private void initController() {
-        // Wire up all the buttons
         view.processBillButton.addActionListener(e -> processBill());
         view.searchBillsButton.addActionListener(e -> searchBills());
         view.deleteBillButton.addActionListener(e -> deleteBill());
-        view.viewLogButton.addActionListener(e -> viewLog());
+        view.printBillButton.addActionListener(e -> printBill());
+        view.viewLogButton.addActionListener(e -> viewLog()); // Listener was already here, confirming it stays
 
-        // Add a listener to the table to enable/disable buttons
         view.billsTable.getSelectionModel().addListSelectionListener(e -> {
             boolean rowSelected = view.billsTable.getSelectedRow() != -1;
             view.deleteBillButton.setEnabled(rowSelected);
-            view.viewLogButton.setEnabled(rowSelected);
+            view.printBillButton.setEnabled(rowSelected);
+            view.viewLogButton.setEnabled(rowSelected); // Line was already here, confirming it stays
         });
     }
 
@@ -58,8 +65,7 @@ public class BillingController {
 
         currentBills = billingDAO.getBillsByPatientId(patientId);
 
-        // Populate the JTable
-        String[] columnNames = {"Bill ID", "Service", "Amount", "Status"};
+        String[] columnNames = {"Bill ID", "Service", "Original Amount", "Final Amount", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0) {
             @Override // This makes the table cells not editable
             public boolean isCellEditable(int row, int column) { return false; }
@@ -70,6 +76,7 @@ public class BillingController {
             row.add(bill.getBillId());
             row.add(bill.getServiceDescription());
             row.add(String.format("%.2f", bill.getAmount()));
+            row.add(String.format("%.2f", bill.getFinalAmount()));
             row.add(bill.getStatus());
             model.addRow(row);
         }
@@ -96,13 +103,32 @@ public class BillingController {
         }
     }
 
+    // --- REPLACED the printBill method with this new version ---
+    private void printBill() {
+        int selectedRow = view.billsTable.getSelectedRow();
+        if (selectedRow == -1) return;
+
+        MedicalBill selectedBill = currentBills.get(selectedRow);
+        PatientRecord patient = patientDAO.getPatientById(selectedBill.getPatientId());
+
+        if (patient != null) {
+            // 1. Fetch the list of all insurance plans
+            List<InsurancePlan> allPlans = insuranceDAO.getAllPlans();
+
+            // 2. Pass the list to the printer
+            BillPrinter.printBill(selectedBill, patient, allPlans);
+
+            JOptionPane.showMessageDialog(view, "Bill PDF has been generated in the project folder.", "Success", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(view, "Could not find patient data to generate the bill.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void viewLog() {
         int selectedRow = view.billsTable.getSelectedRow();
         if (selectedRow == -1) return;
 
         MedicalBill selectedBillStub = currentBills.get(selectedRow);
-
-        // Fetch the full bill object from the database, including the log
         MedicalBill fullBill = billingDAO.getBillById(selectedBillStub.getBillId());
 
         if (fullBill != null) {
@@ -121,30 +147,32 @@ public class BillingController {
     }
 
     private void processBill() {
-        // Note the change to use the 'createPatientIdField'
         String patientId = view.createPatientIdField.getText().trim();
-        if (patientDAO.getPatientById(patientId) == null) {
+        PatientRecord patient = patientDAO.getPatientById(patientId);
+
+        if (patient == null) {
             JOptionPane.showMessageDialog(view, "Patient with ID '" + patientId + "' not found.", "Validation Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         String service = view.serviceField.getText();
         String amountStr = view.amountField.getText();
-        String insurance = view.insuranceField.getText();
 
         double amount;
-        try { amount = Double.parseDouble(amountStr); }
-        catch (NumberFormatException ex) {
+        try {
+            amount = Double.parseDouble(amountStr);
+        } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(view, "Invalid amount.", "Input Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        MedicalBill bill = new MedicalBill(patientId, service, amount, insurance);
-        billProcessingChain.processBill(bill);
+        MedicalBill bill = new MedicalBill(patientId, service, amount);
+        BillProcessingRequest request = new BillProcessingRequest(bill, patient);
+
+        billProcessingChain.processBill(request);
 
         JOptionPane.showMessageDialog(view, "Processing complete.\nFinal Status: " + bill.getStatus(), "Processing Result", JOptionPane.INFORMATION_MESSAGE);
 
-        // If the new bill is for the patient we are currently viewing, refresh the list
         if (patientId.equals(view.searchPatientIdField.getText().trim())) {
             searchBills();
         }

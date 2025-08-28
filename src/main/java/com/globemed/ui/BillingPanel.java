@@ -10,14 +10,15 @@ public class BillingPanel extends JPanel {
     public final JTextField searchPatientIdField = new JTextField(15);
     public final JButton searchBillsButton = new JButton("Search Bills");
     public final JTable billsTable = new JTable();
-    public final JButton deleteBillButton = new JButton("Delete Selected Bill");
     public final JButton viewLogButton = new JButton("View Processing Log");
+    public final JButton printBillButton = new JButton("Print Selected Bill"); // NEW
+    public final JButton deleteBillButton = new JButton("Delete Selected Bill");
 
     // --- Create New Bill Components ---
     public final JTextField createPatientIdField = new JTextField(15);
     public final JTextField serviceField = new JTextField(30);
     public final JTextField amountField = new JTextField(10);
-    public final JTextField insuranceField = new JTextField(20);
+    // The insurance field is now GONE
     public final JButton processBillButton = new JButton("Process New Bill");
 
     public BillingPanel() {
@@ -42,6 +43,7 @@ public class BillingPanel extends JPanel {
         // Action buttons for results
         JPanel resultsActionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         resultsActionPanel.add(viewLogButton);
+        resultsActionPanel.add(printBillButton); // ADD THIS
         resultsActionPanel.add(deleteBillButton);
         topPanel.add(resultsActionPanel, BorderLayout.SOUTH);
 
@@ -50,25 +52,29 @@ public class BillingPanel extends JPanel {
         // --- Bottom Panel: Create a New Bill Form ---
         JPanel createPanel = new JPanel(new GridBagLayout());
         createPanel.setBorder(new TitledBorder("Create and Process a New Bill"));
-        // (GridBagLayout logic is similar to before)
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.anchor = GridBagConstraints.WEST;
+
+        // Row 0
         gbc.gridx = 0; gbc.gridy = 0; createPanel.add(new JLabel("Patient ID:"), gbc);
         gbc.gridx = 1; gbc.gridy = 0; createPanel.add(createPatientIdField, gbc);
-        gbc.gridx = 0; gbc.gridy = 1; createPanel.add(new JLabel("Service Description:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 1; createPanel.add(serviceField, gbc);
         gbc.gridx = 2; gbc.gridy = 0; createPanel.add(new JLabel("Amount:"), gbc);
         gbc.gridx = 3; gbc.gridy = 0; createPanel.add(amountField, gbc);
-        gbc.gridx = 2; gbc.gridy = 1; createPanel.add(new JLabel("Insurance Policy # (Optional):"), gbc);
-        gbc.gridx = 3; gbc.gridy = 1; createPanel.add(insuranceField, gbc);
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 4; gbc.anchor = GridBagConstraints.CENTER;
+
+        // Row 1
+        gbc.gridx = 0; gbc.gridy = 1; createPanel.add(new JLabel("Service Description:"), gbc);
+        gbc.gridx = 1; gbc.gridy = 1; gbc.gridwidth = 3; gbc.fill = GridBagConstraints.HORIZONTAL; createPanel.add(serviceField, gbc);
+
+        // Row 2 (Button)
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 4; gbc.fill = GridBagConstraints.NONE; gbc.anchor = GridBagConstraints.CENTER;
         createPanel.add(processBillButton, gbc);
 
         add(createPanel, BorderLayout.SOUTH);
 
         // Initial button states
         deleteBillButton.setEnabled(false);
+        printBillButton.setEnabled(false);
         viewLogButton.setEnabled(false);
     }
 }
