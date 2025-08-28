@@ -22,19 +22,29 @@ public class PatientSummaryReportVisitor implements ReportVisitor {
         } else {
             reportContent.append("Insurance Plan: None\n");
         }
+
+        // --- Medical History ---
         reportContent.append("\n--- Medical History ---\n");
         if (patient.getMedicalHistory().isEmpty()) {
             reportContent.append("No medical history recorded.\n");
         } else {
             patient.getMedicalHistory().forEach(line -> reportContent.append("- ").append(line).append("\n"));
         }
-        reportContent.append("\n");
+
+        // --- NEW: Treatment Plans Section ---
+        reportContent.append("\n--- Treatment Plans ---\n");
+        if (patient.getTreatmentPlans().isEmpty()) {
+            reportContent.append("No treatment plans recorded.\n");
+        } else {
+            patient.getTreatmentPlans().forEach(line -> reportContent.append("- ").append(line).append("\n"));
+        }
+        // --- END NEW SECTION ---
+
+        reportContent.append("\n"); // Add a final newline for spacing before appointments/billing
     }
 
     @Override
     public void visit(Appointment appointment) {
-        // This method will be called for each appointment a patient has.
-        // We can add a header if it's the first appointment we're visiting.
         if (!reportContent.toString().contains("--- Appointments ---")) {
             reportContent.append("--- Appointments ---\n");
         }
@@ -47,7 +57,6 @@ public class PatientSummaryReportVisitor implements ReportVisitor {
 
     @Override
     public void visit(MedicalBill bill) {
-        // This method will be called for each bill a patient has.
         if (!reportContent.toString().contains("--- Billing History ---")) {
             reportContent.append("\n--- Billing History ---\n");
         }
