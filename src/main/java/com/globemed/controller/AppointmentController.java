@@ -58,6 +58,8 @@ public class AppointmentController {
         // Doctors and Nurses can view all appointments
         view.viewAllAppointmentsButton.setEnabled(currentUser.hasPermission("can_access_appointments"));
 
+        // Only Nurses and Admins can book appointments
+        view.bookAppointmentButton.setEnabled(currentUser.hasPermission("can_book_appointment"));
         // Only doctors can potentially update status (e.g., mark as done)
         // For now, we enable update for all who can access appointment,
         // but specific status changes would need further checks in the dialog or here.

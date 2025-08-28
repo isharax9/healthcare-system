@@ -7,11 +7,10 @@ public class NurseRole extends UserRoleDecorator {
 
     @Override
     public boolean hasPermission(String permission) {
-        // Nurses can also access patient and appointment tabs.
-        // (In a real system, they might have fewer editing rights, but for now, this is fine).
         if (    "can_access_patients".equals(permission) ||
                 "can_access_appointments".equals(permission) ||
-                "can_generate_reports".equals(permission))  {
+                "can_generate_reports".equals(permission) ||
+                "can_book_appointment".equals(permission) ) {
             return true;
         }
         // Nurses DO NOT have permissions like:
@@ -21,6 +20,7 @@ public class NurseRole extends UserRoleDecorator {
         // "can_mark_appointment_done"
         // "can_update_appointment"
         // "can_access_billing"
+        // "can_view_all_patients"
 
         return super.hasPermission(permission);
     }

@@ -112,6 +112,35 @@ public class SchedulingDAO {
         return appointments;
     }
 
+    /**
+     * Fetches all appointments for a specific doctor.
+     * @param doctorId The ID of the doctor to filter by.
+     * @return A list of Appointment objects for that doctor, ordered by datetime.
+     */
+    public List<Appointment> getAppointmentsByDoctorId(String doctorId) {
+        List<Appointment> appointments = new ArrayList<>();
+        String sql = "SELECT * FROM appointments WHERE doctor_id = ? ORDER BY appointment_datetime DESC";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, doctorId);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                Appointment appt = new Appointment(
+                        rs.getString("patient_id"),
+                        rs.getString("doctor_id"),
+                        rs.getTimestamp("appointment_datetime").toLocalDateTime(),
+                        rs.getString("reason")
+                );
+                appt.setAppointmentId(rs.getInt("appointment_id"));
+                appt.setStatus(rs.getString("status"));
+                appointments.add(appt);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching appointments by doctor ID: " + e.getMessage());
+        }
+        return appointments;
+    }
+
     public boolean createAppointment(Appointment appointment) {
         String sql = "INSERT INTO appointments (patient_id, doctor_id, appointment_datetime, reason) VALUES (?, ?, ?, ?)";
         try (Connection conn = DatabaseManager.getConnection();
