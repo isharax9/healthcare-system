@@ -1,11 +1,12 @@
 package com.globemed.ui;
 
-import com.globemed.Main; // Import Main class
+import com.globemed.Main;
 import com.globemed.auth.IUser;
 import com.globemed.controller.AppointmentController;
 import com.globemed.controller.BillingController;
 import com.globemed.controller.PatientController;
 import com.globemed.controller.ReportController;
+import com.globemed.controller.StaffController; // <-- NEW IMPORT
 
 import javax.swing.*;
 import java.awt.*;
@@ -70,8 +71,17 @@ public class MainFrame extends JFrame {
             System.out.println("User " + currentUser.getUsername() + " does not have permission to generate Reports.");
         }
 
+        // --- NEW: Staff Management Tab ---
+        if (currentUser.hasPermission("can_manage_staff")) { // Only Admins have this permission
+            StaffPanel staffPanel = new StaffPanel();
+            new StaffController(staffPanel, this, currentUser); // Instantiate the new controller
+            tabbedPane.addTab("Staff Management", staffPanel); // Add the new tab
+        } else {
+            System.out.println("User " + currentUser.getUsername() + " does not have permission to manage staff.");
+        }
+        // --- END NEW TAB ---
+
         // --- Final Content Addition ---
-        // If a user has no permissions, display a message instead of an empty tab pane.
         if (tabbedPane.getTabCount() == 0) {
             JLabel noAccessLabel = new JLabel("You do not have permission to access any modules.", SwingConstants.CENTER);
             add(noAccessLabel);
@@ -84,33 +94,21 @@ public class MainFrame extends JFrame {
      * Creates and configures the main menu bar for the application.
      */
     private void createMenuBar() {
-        // --- Menu Bar for Logout/Restart ---
         JMenuBar menuBar = new JMenuBar();
-
-        // --- File Menu ---
         JMenu fileMenu = new JMenu("More");
-
-        // Logout Menu Item
         JMenuItem logoutItem = new JMenuItem("Logout");
         logoutItem.addActionListener(e -> logout());
-
-        // Dark Mode Menu Item
         JMenuItem darkModeItem = new JMenuItem("Change Theme");
         darkModeItem.addActionListener(e -> toggleDarkMode());
-
-        // Exit Menu Item
         JMenuItem exitItem = new JMenuItem("Exit");
         exitItem.addActionListener(e -> System.exit(0));
 
         fileMenu.add(logoutItem);
         fileMenu.addSeparator();
         fileMenu.add(darkModeItem);
-        fileMenu.addSeparator(); // Adds a visual line between menu items
+        fileMenu.addSeparator();
         fileMenu.add(exitItem);
-
         menuBar.add(fileMenu);
-
-        // Set the menu bar for this frame
         setJMenuBar(menuBar);
     }
 
@@ -119,24 +117,14 @@ public class MainFrame extends JFrame {
      */
     private void toggleDarkMode() {
         try {
-            // Get current Look and Feel
             String currentLaF = UIManager.getLookAndFeel().getClass().getName();
-
-            // Toggle between dark and light themes
             if (currentLaF.contains("Nimbus")) {
-                // Switch to a light theme (system default)
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } else {
-                // Switch to Nimbus (darker theme)
                 UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
             }
-
-            // Update all components in the application
             SwingUtilities.updateComponentTreeUI(this);
-
-            // Repaint to ensure changes are visible
             this.repaint();
-
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Failed to toggle dark mode: " + ex.getMessage(),
@@ -150,9 +138,7 @@ public class MainFrame extends JFrame {
      * telling the main application class to restart the login sequence.
      */
     private void logout() {
-        // Close the current MainFrame window
         this.dispose();
-        // Call the restart method in the Main class
-        appInstance.restart(); // Fixed: use appInstance instead of mainApp
+        appInstance.restart();
     }
 }
