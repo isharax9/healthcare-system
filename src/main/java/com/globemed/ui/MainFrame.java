@@ -79,17 +79,23 @@ public class MainFrame extends JFrame {
         JMenuBar menuBar = new JMenuBar();
 
         // --- File Menu ---
-        JMenu fileMenu = new JMenu("File");
+        JMenu fileMenu = new JMenu("More");
 
         // Logout Menu Item
         JMenuItem logoutItem = new JMenuItem("Logout");
         logoutItem.addActionListener(e -> logout());
+
+        // Dark Mode Menu Item
+        JMenuItem darkModeItem = new JMenuItem("Change Theme");
+        darkModeItem.addActionListener(e -> toggleDarkMode());
 
         // Exit Menu Item
         JMenuItem exitItem = new JMenuItem("Exit");
         exitItem.addActionListener(e -> System.exit(0));
 
         fileMenu.add(logoutItem);
+        fileMenu.addSeparator();
+        fileMenu.add(darkModeItem);
         fileMenu.addSeparator(); // Adds a visual line between menu items
         fileMenu.add(exitItem);
 
@@ -97,6 +103,37 @@ public class MainFrame extends JFrame {
 
         // Set the menu bar for this frame
         setJMenuBar(menuBar);
+    }
+
+    /**
+     * Toggles between dark and light themes for the application.
+     */
+    private void toggleDarkMode() {
+        try {
+            // Get current Look and Feel
+            String currentLaF = UIManager.getLookAndFeel().getClass().getName();
+
+            // Toggle between dark and light themes
+            if (currentLaF.contains("Nimbus")) {
+                // Switch to a light theme (system default)
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } else {
+                // Switch to Nimbus (darker theme)
+                UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+            }
+
+            // Update all components in the application
+            SwingUtilities.updateComponentTreeUI(this);
+
+            // Repaint to ensure changes are visible
+            this.repaint();
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Failed to toggle dark mode: " + ex.getMessage(),
+                    "Theme Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /**
