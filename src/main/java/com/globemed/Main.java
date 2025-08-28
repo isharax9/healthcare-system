@@ -8,37 +8,40 @@ import com.globemed.ui.MainFrame;
 import javax.swing.*;
 
 public class Main {
+    private AuthService authService;
+
     public static void main(String[] args) {
-        // We still use invokeLater to ensure all UI operations are on the EDT
+        // The static main method now just creates an instance and starts the app
         SwingUtilities.invokeLater(() -> {
-            // 1. Create the authentication service
-            AuthService authService = new AuthService();
-            IUser currentUser = null;
-
-            // 2. Show the login dialog
-            LoginDialog loginDialog = new LoginDialog(null); // null parent
-            loginDialog.setVisible(true);
-
-            // This part of the code will only run AFTER the dialog is closed
-
-            // 3. Attempt to authenticate
-            String username = loginDialog.getUsername();
-            // Don't try to log in if the user canceled
-            if (username != null && !username.isEmpty()) {
-                currentUser = authService.login(username, loginDialog.getPassword());
-            }
-
-            // 4. Check if authentication was successful
-            if (currentUser != null) {
-                // If successful, create and show the main application frame
-                // We pass the logged-in user to the MainFrame so it can enforce permissions
-                MainFrame mainFrame = new MainFrame(currentUser);
-                mainFrame.setVisible(true);
-            } else {
-                // If login fails or was canceled, show a message and exit the application
-                JOptionPane.showMessageDialog(null, "Login failed. Application will now exit.", "Error", JOptionPane.ERROR_MESSAGE);
-                System.exit(0);
-            }
+            Main app = new Main();
+            app.startApp();
         });
+    }
+
+    public Main() {
+        this.authService = new AuthService();
+    }
+
+    public void startApp() {
+        // This method contains our main application logic
+        LoginDialog loginDialog = new LoginDialog(null, authService);
+        loginDialog.setVisible(true);
+
+        IUser currentUser = loginDialog.getAuthenticatedUser();
+
+        if (currentUser != null) {
+            // Pass 'this' (the Main instance) to the MainFrame
+            MainFrame mainFrame = new MainFrame(currentUser, this);
+            mainFrame.setVisible(true);
+        } else {
+            // User closed the dialog or failed to log in repeatedly
+            System.exit(0);
+        }
+    }
+
+    public void restart() {
+        // This method is called by MainFrame to handle logout
+        // It simply starts the login process again
+        startApp();
     }
 }
