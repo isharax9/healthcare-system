@@ -3,11 +3,13 @@ package com.globemed.controller;
 import com.globemed.appointment.Appointment;
 import com.globemed.appointment.AppointmentScheduler;
 import com.globemed.appointment.Doctor;
-import com.globemed.auth.IUser; // <-- Add import
+import com.globemed.auth.IUser;
 import com.globemed.db.SchedulingDAO;
+import com.globemed.ui.AllAppointmentsDialog; // <-- NEW IMPORT
 import com.globemed.ui.AppointmentPanel;
 
 import javax.swing.*;
+import java.awt.*; // Make sure this is imported for JFrame
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -19,34 +21,30 @@ public class AppointmentController {
     private final AppointmentPanel view;
     private final SchedulingDAO dao;
     private final AppointmentScheduler scheduler; // The Mediator
-    private final IUser currentUser; // <-- ADD THIS FIELD
-    private final JFrame mainFrame;
+    private final IUser currentUser;
+    private final JFrame mainFrame; // For parenting dialogs
 
-    // --- THIS IS THE CORRECTED CONSTRUCTOR ---
-    public AppointmentController(AppointmentPanel view, JFrame mainFrame, IUser currentUser) { // ADDED 'mainFrame'
+    public AppointmentController(AppointmentPanel view, JFrame mainFrame, IUser currentUser) {
         this.view = view;
-        this.mainFrame = mainFrame; // <-- Initialize the new field
+        this.mainFrame = mainFrame;
         this.dao = new SchedulingDAO();
         this.scheduler = new AppointmentScheduler();
         this.currentUser = currentUser;
         initController();
         loadInitialData();
+        applyPermissions(); // <-- NEW CALL
     }
 
     private void initController() {
-        // Explicit action to view schedule
         view.viewScheduleButton.addActionListener(e -> viewSchedule());
-
-        // CRUD actions
         view.bookAppointmentButton.addActionListener(e -> bookNewAppointment());
         view.cancelAppointmentButton.addActionListener(e -> cancelAppointment());
         view.updateAppointmentButton.addActionListener(e -> updateAppointment());
+        view.viewAllAppointmentsButton.addActionListener(e -> showAllAppointments()); // <-- NEW LISTENER
 
-        // MODIFY the selection listener
         view.appointmentsList.addListSelectionListener(e -> {
             boolean isSelected = view.appointmentsList.getSelectedValue() != null;
             view.updateAppointmentButton.setEnabled(isSelected);
-            // Apply permission check to the cancel button
             view.cancelAppointmentButton.setEnabled(isSelected && currentUser.hasPermission("can_delete_appointment"));
         });
     }
@@ -54,6 +52,38 @@ public class AppointmentController {
     private void loadInitialData() {
         view.setDoctorList(dao.getAllDoctors());
     }
+
+    // --- NEW METHOD: Apply Permissions ---
+    private void applyPermissions() {
+        // Doctors and Nurses can view all appointments
+        view.viewAllAppointmentsButton.setEnabled(currentUser.hasPermission("can_access_appointments"));
+
+        // Only doctors can potentially update status (e.g., mark as done)
+        // For now, we enable update for all who can access appointment,
+        // but specific status changes would need further checks in the dialog or here.
+        // The "Mark as Done" button in AllAppointmentsDialog will handle its own permissions.
+    }
+
+    // --- NEW METHOD: Show All Appointments ---
+    private void showAllAppointments() {
+        // Fetch all appointments
+        List<Appointment> allAppointments = dao.getAllAppointments();
+
+        if (allAppointments.isEmpty()) {
+            JOptionPane.showMessageDialog(mainFrame, "No appointments found in the database.", "Information", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Pass the permission for marking as done to the dialog
+        AllAppointmentsDialog dialog = new AllAppointmentsDialog(
+                mainFrame,
+                allAppointments,
+                currentUser.hasPermission("can_mark_appointment_done") // Pass this permission
+        );
+        dialog.setVisible(true);
+        viewSchedule(); // Refresh the current schedule view after dialog closes, in case a status was changed
+    }
+
 
     private void viewSchedule() {
         Doctor selectedDoctor = view.doctorList.getSelectedValue();
@@ -69,7 +99,6 @@ public class AppointmentController {
     }
 
     private void bookNewAppointment() {
-        // ... (This logic is the same as before)
         Doctor selectedDoctor = view.doctorList.getSelectedValue();
         String patientId = view.patientIdField.getText().trim();
         String reason = view.reasonField.getText().trim();
@@ -90,14 +119,12 @@ public class AppointmentController {
         viewSchedule(); // Refresh view
     }
 
-    // MODIFY the cancelAppointment method
     private void cancelAppointment() {
-        // Add a permission check at the very beginning
         if (!currentUser.hasPermission("can_delete_appointment")) {
             JOptionPane.showMessageDialog(view, "You do not have permission to cancel appointments.", "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
+
         Appointment selectedAppointment = view.appointmentsList.getSelectedValue();
         if (selectedAppointment == null) return;
 
@@ -117,15 +144,19 @@ public class AppointmentController {
     }
 
     private void updateAppointment() {
+        // In a real app, update might involve changing doctor/time, which is complex.
+        // For simplicity, we just allow updating the reason for now, but a full update dialog would be needed.
+        if (!currentUser.hasPermission("can_update_appointment")) { // New permission for updating
+            JOptionPane.showMessageDialog(view, "You do not have permission to update appointments.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         Appointment selectedAppointment = view.appointmentsList.getSelectedValue();
         if (selectedAppointment == null) return;
 
-        // For simplicity, we'll just allow updating the reason via a dialog
         String newReason = JOptionPane.showInputDialog(view, "Enter new reason for appointment:", selectedAppointment.getReason());
 
         if (newReason != null && !newReason.trim().isEmpty()) {
-            // In a real app, you'd create a more complex dialog to change time, etc.
-            // Here we just update the reason on the existing appointment object
             Appointment updatedAppointment = new Appointment(
                     selectedAppointment.getPatientId(),
                     selectedAppointment.getDoctorId(),
@@ -133,7 +164,7 @@ public class AppointmentController {
                     newReason.trim()
             );
             updatedAppointment.setAppointmentId(selectedAppointment.getAppointmentId());
-            updatedAppointment.setStatus("Updated"); // Optionally update status
+            updatedAppointment.setStatus(selectedAppointment.getStatus()); // Keep original status unless explicitly changed
 
             boolean success = dao.updateAppointment(updatedAppointment);
             if (success) {

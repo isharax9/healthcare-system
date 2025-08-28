@@ -69,10 +69,10 @@ public class SchedulingDAO {
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
                 Appointment appt = new Appointment(
-                    rs.getString("patient_id"),
-                    rs.getString("doctor_id"),
-                    rs.getTimestamp("appointment_datetime").toLocalDateTime(),
-                    rs.getString("reason")
+                        rs.getString("patient_id"),
+                        rs.getString("doctor_id"),
+                        rs.getTimestamp("appointment_datetime").toLocalDateTime(),
+                        rs.getString("reason")
                 );
                 appt.setAppointmentId(rs.getInt("appointment_id"));
                 appt.setStatus(rs.getString("status"));
@@ -80,6 +80,34 @@ public class SchedulingDAO {
             }
         } catch (SQLException e) {
             System.err.println("Error fetching appointments by patient ID: " + e.getMessage());
+        }
+        return appointments;
+    }
+
+    // --- NEW METHOD: Get All Appointments ---
+    /**
+     * Fetches all appointments from the database.
+     * @return A list of all Appointment objects, ordered by datetime.
+     */
+    public List<Appointment> getAllAppointments() {
+        List<Appointment> appointments = new ArrayList<>();
+        String sql = "SELECT * FROM appointments ORDER BY appointment_datetime DESC";
+        try (Connection conn = DatabaseManager.getConnection();
+             Statement stmt = conn.createStatement(); // Using Statement for no parameters
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                Appointment appt = new Appointment(
+                        rs.getString("patient_id"),
+                        rs.getString("doctor_id"),
+                        rs.getTimestamp("appointment_datetime").toLocalDateTime(),
+                        rs.getString("reason")
+                );
+                appt.setAppointmentId(rs.getInt("appointment_id"));
+                appt.setStatus(rs.getString("status"));
+                appointments.add(appt);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching all appointments: " + e.getMessage());
         }
         return appointments;
     }
