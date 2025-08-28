@@ -20,13 +20,15 @@ public class AppointmentController {
     private final SchedulingDAO dao;
     private final AppointmentScheduler scheduler; // The Mediator
     private final IUser currentUser; // <-- ADD THIS FIELD
+    private final JFrame mainFrame;
 
-    // MODIFY THE CONSTRUCTOR
-    public AppointmentController(AppointmentPanel view, IUser currentUser) {
+    // --- THIS IS THE CORRECTED CONSTRUCTOR ---
+    public AppointmentController(AppointmentPanel view, JFrame mainFrame, IUser currentUser) { // ADDED 'mainFrame'
         this.view = view;
+        this.mainFrame = mainFrame; // <-- Initialize the new field
         this.dao = new SchedulingDAO();
         this.scheduler = new AppointmentScheduler();
-        this.currentUser = currentUser; // <-- STORE THE USER
+        this.currentUser = currentUser;
         initController();
         loadInitialData();
     }

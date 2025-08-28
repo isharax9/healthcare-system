@@ -1,6 +1,7 @@
 package com.globemed.controller;
 
 import com.globemed.appointment.Appointment;
+import com.globemed.auth.IUser;
 import com.globemed.billing.MedicalBill;
 import com.globemed.db.BillingDAO;
 import com.globemed.db.PatientDAO;
@@ -19,11 +20,15 @@ public class ReportController {
     private final PatientDAO patientDAO;
     private final SchedulingDAO schedulingDAO;
     private final BillingDAO billingDAO;
+    private final JFrame mainFrame; // <-- Ensure this field exists
+    private final IUser currentUser;
+    private PatientRecord currentPatient;
 
-    private PatientRecord currentPatient; // The patient for whom we are generating reports
-
-    public ReportController(ReportPanel view) {
+    // --- THIS IS THE CORRECTED CONSTRUCTOR ---
+    public ReportController(ReportPanel view, JFrame mainFrame, IUser currentUser) { // ADDED 'mainFrame' and 'currentUser'
         this.view = view;
+        this.mainFrame = mainFrame; // <-- Initialize the new field
+        this.currentUser = currentUser; // <-- Initialize the new field
         this.patientDAO = new PatientDAO();
         this.schedulingDAO = new SchedulingDAO();
         this.billingDAO = new BillingDAO();

@@ -1,13 +1,13 @@
 package com.globemed.controller;
 
-// ADD THESE IMPORTS
+import com.globemed.auth.IUser;
 import com.globemed.db.InsuranceDAO;
-import com.globemed.insurance.InsurancePlan;
 import com.globemed.db.PatientDAO;
+import com.globemed.insurance.InsurancePlan;
 import com.globemed.patient.PatientRecord;
 import com.globemed.patient.RecordHistory;
+import com.globemed.ui.AllPatientsDialog;
 import com.globemed.ui.PatientPanel;
-import com.globemed.auth.IUser; // <-- Add import
 
 import javax.swing.*;
 import java.util.List;
@@ -15,25 +15,24 @@ import java.util.List;
 public class PatientController {
     private final PatientPanel view;
     private final PatientDAO dao;
-    private final InsuranceDAO insuranceDAO; // <-- ADDED
-    private final IUser currentUser; // <-- ADD THIS FIELD
+    private final InsuranceDAO insuranceDAO;
+    private final IUser currentUser;
+    private final JFrame mainFrame; // For parenting dialogs
     private PatientRecord currentPatient;
     private RecordHistory recordHistory;
     private boolean isNewPatientMode = false;
 
-    // MODIFY THE CONSTRUCTOR
-    public PatientController(PatientPanel view, IUser currentUser) {
+    public PatientController(PatientPanel view, JFrame mainFrame, IUser currentUser) {
         this.view = view;
+        this.mainFrame = mainFrame;
+        this.currentUser = currentUser;
         this.dao = new PatientDAO();
-        this.insuranceDAO = new InsuranceDAO(); // <-- INITIALIZED
-        this.currentUser = currentUser; // <-- STORE THE USER
+        this.insuranceDAO = new InsuranceDAO();
         initController();
-        loadInitialData(); // <-- ADDED CALL
+        loadInitialData();
     }
 
-    // ADDED THIS NEW METHOD
     private void loadInitialData() {
-        // Fetch all insurance plans and populate the dropdown in the view
         List<InsurancePlan> plans = insuranceDAO.getAllPlans();
         view.setInsurancePlans(plans);
     }
@@ -45,9 +44,19 @@ public class PatientController {
         view.saveButton.addActionListener(e -> savePatient());
         view.deleteButton.addActionListener(e -> deletePatient());
         view.undoButton.addActionListener(e -> undoChanges());
+        view.viewAllButton.addActionListener(e -> showAllPatients());
     }
 
-    // MODIFIED this method
+    private void showAllPatients() {
+        List<PatientRecord> allPatients = dao.getAllPatients();
+        if (allPatients.isEmpty()) {
+            JOptionPane.showMessageDialog(mainFrame, "No patients found in the database.", "Information", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        AllPatientsDialog dialog = new AllPatientsDialog(mainFrame, allPatients);
+        dialog.setVisible(true);
+    }
+
     private void searchPatient() {
         isNewPatientMode = false;
         String patientId = view.getSearchId();
@@ -61,10 +70,9 @@ public class PatientController {
             recordHistory = new RecordHistory(currentPatient);
             displayPatientData();
             view.setFieldsEditable(false);
-            view.insurancePlanComboBox.setEnabled(false); // Explicitly disable
-            // Apply permission check to the delete button
-            view.deleteButton.setEnabled(currentUser.hasPermission("can_delete_patient"));
+            view.insurancePlanComboBox.setEnabled(false);
             view.editButton.setEnabled(true);
+            view.deleteButton.setEnabled(currentUser.hasPermission("can_delete_patient"));
         } else {
             JOptionPane.showMessageDialog(view, "Patient not found.", "Error", JOptionPane.ERROR_MESSAGE);
             view.clearFields();
@@ -73,14 +81,23 @@ public class PatientController {
         }
     }
 
-    // MODIFIED this method
+    private void prepareNewPatient() {
+        isNewPatientMode = true;
+        currentPatient = null;
+        recordHistory = null;
+        view.clearFields();
+        view.setFieldsEditable(true);
+        view.setPatientIdEditable(true);
+        view.editButton.setEnabled(false);
+        view.deleteButton.setEnabled(false);
+        view.undoButton.setEnabled(false);
+    }
+
     private void editPatient() {
         recordHistory.save();
         view.setFieldsEditable(true);
-        view.insurancePlanComboBox.setEnabled(true); // Explicitly enable
     }
 
-    // MODIFIED this method
     private void savePatient() {
         if (isNewPatientMode && view.getPatientId().getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(view, "Patient ID cannot be empty for a new record.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -88,11 +105,10 @@ public class PatientController {
         }
 
         if (isNewPatientMode) {
-            // --- CREATE LOGIC ---
             PatientRecord newPatient = new PatientRecord(view.getPatientId().getText(), view.getPatientName());
             newPatient.setMedicalHistory(view.getMedicalHistory());
             newPatient.setTreatmentPlans(view.getTreatmentPlans());
-            newPatient.setInsurancePlan(view.getSelectedInsurancePlan()); // <-- ADDED
+            newPatient.setInsurancePlan(view.getSelectedInsurancePlan());
 
             boolean success = dao.createPatient(newPatient);
             if (success) {
@@ -106,54 +122,30 @@ public class PatientController {
                 JOptionPane.showMessageDialog(view, "Failed to create patient. The ID might already exist.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         } else {
-            // --- UPDATE LOGIC ---
             currentPatient.setName(view.getPatientName());
             currentPatient.setMedicalHistory(view.getMedicalHistory());
             currentPatient.setTreatmentPlans(view.getTreatmentPlans());
-            currentPatient.setInsurancePlan(view.getSelectedInsurancePlan()); // <-- ADDED
+            currentPatient.setInsurancePlan(view.getSelectedInsurancePlan());
 
             boolean success = dao.updatePatient(currentPatient);
             if (success) {
                 JOptionPane.showMessageDialog(view, "Patient record updated successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
                 view.setFieldsEditable(false);
-                view.insurancePlanComboBox.setEnabled(false); // Explicitly disable
             } else {
                 JOptionPane.showMessageDialog(view, "Failed to update patient record.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
-    // MODIFY the prepareNewPatient method
-    private void prepareNewPatient() {
-        isNewPatientMode = true;
-        currentPatient = null;
-        recordHistory = null;
-
-        view.clearFields();
-        view.setFieldsEditable(true);
-        view.setPatientIdEditable(true);
-        view.editButton.setEnabled(false);
-        view.deleteButton.setEnabled(false); // Should always be false for a new patient
-        view.undoButton.setEnabled(false);
-    }
-
-    // MODIFY the deletePatient method
     private void deletePatient() {
-        // Add a permission check at the very beginning
         if (!currentUser.hasPermission("can_delete_patient")) {
             JOptionPane.showMessageDialog(view, "You do not have permission to delete patient records.", "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
         if (currentPatient == null) return;
 
-        int response = JOptionPane.showConfirmDialog(
-                view,
-                "Are you sure you want to delete patient " + currentPatient.getName() + "?",
-                "Confirm Deletion",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE
-        );
+        int response = JOptionPane.showConfirmDialog(view, "Are you sure you want to delete patient " + currentPatient.getName() + "?",
+                "Confirm Deletion", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
         if (response == JOptionPane.YES_OPTION) {
             boolean success = dao.deletePatient(currentPatient.getPatientId());
@@ -168,16 +160,17 @@ public class PatientController {
     }
 
     private void undoChanges() {
-        recordHistory.undo();
-        displayPatientData();
+        if (recordHistory != null) {
+            recordHistory.undo();
+            displayPatientData();
+        }
     }
 
-    // MODIFIED this method
     private void displayPatientData() {
         view.setPatientId(currentPatient.getPatientId());
         view.setPatientName(currentPatient.getName());
         view.setMedicalHistory(currentPatient.getMedicalHistory());
         view.setTreatmentPlans(currentPatient.getTreatmentPlans());
-        view.setSelectedInsurancePlan(currentPatient.getInsurancePlan()); // <-- ADDED
+        view.setSelectedInsurancePlan(currentPatient.getInsurancePlan());
     }
 }

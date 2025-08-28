@@ -1,66 +1,74 @@
 package com.globemed.ui;
 
-import com.globemed.Main;
+import com.globemed.Main; // Import Main class
 import com.globemed.auth.IUser;
-import com.globemed.controller.*;
+import com.globemed.controller.AppointmentController;
+import com.globemed.controller.BillingController;
+import com.globemed.controller.PatientController;
+import com.globemed.controller.ReportController;
+
 import javax.swing.*;
+import java.awt.*;
 
 public class MainFrame extends JFrame {
 
     private final IUser currentUser;
-    private final Main mainApp; // Reference to the main application instance for restarting
+    private final Main appInstance; // Reference to the Main application instance
 
-    /**
-     * Constructor for the main application window.
-     * @param user The currently logged-in user, decorated with their role.
-     * @param mainApp The instance of the Main class to handle app lifecycle (e.g., logout/restart).
-     */
-    public MainFrame(IUser user, Main mainApp) {
+    // Constructor: Now accepts the Main app instance
+    public MainFrame(IUser user, Main appInstance) {
+        super("GlobeMed Healthcare Management System - Logged in as: " + user.getUsername() + " (" + user.getRole() + ")");
         this.currentUser = user;
-        this.mainApp = mainApp;
+        this.appInstance = appInstance; // Store the app instance
 
-        // --- Frame Setup ---
-        setTitle("GlobeMed HMS - Logged in as: " + currentUser.getUsername() + " (" + currentUser.getRole() + ")");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1024, 768);
-        setLocationRelativeTo(null); // Center the window
+        setSize(1200, 800);
+        setLocationRelativeTo(null);
 
-        // --- Create and add the Menu Bar ---
+        initComponents();
+    }
+
+    private void initComponents() {
+        // Create menu bar first
         createMenuBar();
 
-        // --- Create the Tabbed Pane ---
         JTabbedPane tabbedPane = new JTabbedPane();
 
-        // --- Apply Permissions to Tabs ---
-
-        // 1. Patient Management Tab
+        // --- Patient Management Tab ---
         if (currentUser.hasPermission("can_access_patients")) {
             PatientPanel patientPanel = new PatientPanel();
-            new PatientController(patientPanel, currentUser);
+            new PatientController(patientPanel, this, currentUser);
             tabbedPane.addTab("Patient Management", patientPanel);
+        } else {
+            System.out.println("User " + currentUser.getUsername() + " does not have permission to access Patient Management.");
         }
 
-        // 2. Appointments Tab
+        // --- Appointments Tab ---
         if (currentUser.hasPermission("can_access_appointments")) {
             AppointmentPanel appointmentPanel = new AppointmentPanel();
-            new AppointmentController(appointmentPanel, currentUser);
+            new AppointmentController(appointmentPanel, this, currentUser);
             tabbedPane.addTab("Appointments", appointmentPanel);
+        } else {
+            System.out.println("User " + currentUser.getUsername() + " does not have permission to access Appointments.");
         }
 
-        // 3. Billing Tab
+        // --- Billing Tab ---
         if (currentUser.hasPermission("can_access_billing")) {
             BillingPanel billingPanel = new BillingPanel();
-            new BillingController(billingPanel, currentUser);
+            new BillingController(billingPanel, this, currentUser);
             tabbedPane.addTab("Billing", billingPanel);
+        } else {
+            System.out.println("User " + currentUser.getUsername() + " does not have permission to access Billing.");
         }
 
-        // 4. Reports Tab
+        // --- Reports Tab ---
         if (currentUser.hasPermission("can_generate_reports")) {
             ReportPanel reportPanel = new ReportPanel();
-            new ReportController(reportPanel);
+            new ReportController(reportPanel, this, currentUser);
             tabbedPane.addTab("Reports", reportPanel);
+        } else {
+            System.out.println("User " + currentUser.getUsername() + " does not have permission to generate Reports.");
         }
-
 
         // --- Final Content Addition ---
         // If a user has no permissions, display a message instead of an empty tab pane.
@@ -76,6 +84,7 @@ public class MainFrame extends JFrame {
      * Creates and configures the main menu bar for the application.
      */
     private void createMenuBar() {
+        // --- Menu Bar for Logout/Restart ---
         JMenuBar menuBar = new JMenuBar();
 
         // --- File Menu ---
@@ -144,6 +153,6 @@ public class MainFrame extends JFrame {
         // Close the current MainFrame window
         this.dispose();
         // Call the restart method in the Main class
-        mainApp.restart();
+        appInstance.restart(); // Fixed: use appInstance instead of mainApp
     }
 }

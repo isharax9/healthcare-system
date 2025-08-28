@@ -12,6 +12,7 @@ public class PatientPanel extends JPanel {
     // Search components
     private final JTextField searchIdField = new JTextField(15);
     public final JButton searchButton = new JButton("Search");
+    public final JButton viewAllButton = new JButton("View All Patients"); // <-- ADD THIS
 
     // Display/Edit fields
     private final JTextField patientIdField = new JTextField(20);
@@ -37,6 +38,7 @@ public class PatientPanel extends JPanel {
         searchPanel.add(new JLabel("Patient ID:"));
         searchPanel.add(searchIdField);
         searchPanel.add(searchButton);
+        searchPanel.add(viewAllButton); // <-- AND ADD THE BUTTON HERE
         add(searchPanel, BorderLayout.NORTH);
 
         // --- Details Panel (Center) ---

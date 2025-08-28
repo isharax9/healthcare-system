@@ -2,17 +2,23 @@ package com.globemed.controller;
 
 // Add these imports
 import com.globemed.billing.BillProcessingRequest;
+import com.globemed.billing.BillingHandler;
+import com.globemed.billing.FinalBillingHandler;
+import com.globemed.billing.InsuranceHandler;
+import com.globemed.billing.MedicalBill;
+import com.globemed.billing.ValidationHandler;
+import com.globemed.db.BillingDAO;
 import com.globemed.db.InsuranceDAO;
+import com.globemed.db.PatientDAO;
 import com.globemed.insurance.InsurancePlan;
 import com.globemed.patient.PatientRecord;
-import com.globemed.utils.BillPrinter;
-import com.globemed.billing.*;
-import com.globemed.db.BillingDAO;
-import com.globemed.db.PatientDAO;
 import com.globemed.ui.BillingPanel;
-import com.globemed.auth.IUser; // <-- Add import
+import com.globemed.utils.BillPrinter;
+import com.globemed.auth.IUser;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import java.awt.*; // Import AWT for JFrame
 import java.util.List;
 import java.util.Vector;
 
@@ -22,16 +28,18 @@ public class BillingController {
     private final PatientDAO patientDAO;
     private final InsuranceDAO insuranceDAO;
     private final BillingHandler billProcessingChain;
-    private final IUser currentUser; // <-- ADD THIS FIELD
+    private final IUser currentUser;
+    private final JFrame mainFrame; // <-- ADDED: Field for the main frame
     private List<MedicalBill> currentBills; // To hold the search results
 
-    // MODIFY THE CONSTRUCTOR
-    public BillingController(BillingPanel view, IUser currentUser) {
+    // MODIFIED CONSTRUCTOR: Now accepts JFrame mainFrame
+    public BillingController(BillingPanel view, JFrame mainFrame, IUser currentUser) {
         this.view = view;
+        this.mainFrame = mainFrame; // <-- INITIALIZED
         this.billingDAO = new BillingDAO();
         this.patientDAO = new PatientDAO();
         this.insuranceDAO = new InsuranceDAO();
-        this.currentUser = currentUser; // <-- STORE THE USER
+        this.currentUser = currentUser;
         this.billProcessingChain = setupChain();
         initController();
     }
@@ -52,10 +60,8 @@ public class BillingController {
         view.printBillButton.addActionListener(e -> printBill());
         view.viewLogButton.addActionListener(e -> viewLog());
 
-        // MODIFY the selection listener
         view.billsTable.getSelectionModel().addListSelectionListener(e -> {
             boolean rowSelected = view.billsTable.getSelectedRow() != -1;
-            // Apply permission check to the delete button
             view.deleteBillButton.setEnabled(rowSelected && currentUser.hasPermission("can_delete_bill"));
             view.printBillButton.setEnabled(rowSelected);
             view.viewLogButton.setEnabled(rowSelected);
@@ -73,7 +79,7 @@ public class BillingController {
 
         String[] columnNames = {"Bill ID", "Service", "Original Amount", "Final Amount", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0) {
-            @Override // This makes the table cells not editable
+            @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
 
@@ -89,14 +95,12 @@ public class BillingController {
         view.billsTable.setModel(model);
     }
 
-    // MODIFY the deleteBill method
     private void deleteBill() {
-        // Add a permission check at the very beginning
         if (!currentUser.hasPermission("can_delete_bill")) {
             JOptionPane.showMessageDialog(view, "You do not have permission to delete bills.", "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        
+
         int selectedRow = view.billsTable.getSelectedRow();
         if (selectedRow == -1) return;
 

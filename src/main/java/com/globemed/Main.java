@@ -9,6 +9,7 @@ import javax.swing.*;
 
 public class Main {
     private AuthService authService;
+    private MainFrame mainFrame; // Keep a reference to the main frame if needed, though often passed directly
 
     public static void main(String[] args) {
         // The static main method now just creates an instance and starts the app
@@ -31,17 +32,25 @@ public class Main {
 
         if (currentUser != null) {
             // Pass 'this' (the Main instance) to the MainFrame
-            MainFrame mainFrame = new MainFrame(currentUser, this);
+            mainFrame = new MainFrame(currentUser, this); // Store reference if needed
             mainFrame.setVisible(true);
         } else {
-            // User closed the dialog or failed to log in repeatedly
+            // User closed the dialog or failed to log in
+            System.out.println("Login canceled or failed. Exiting application.");
             System.exit(0);
         }
     }
 
+    /**
+     * This method is called by MainFrame to handle logout and restart the login process.
+     */
     public void restart() {
-        // This method is called by MainFrame to handle logout
-        // It simply starts the login process again
+        // Dispose of the old MainFrame if it's still around (should already be disposed by MainFrame itself)
+        if (mainFrame != null) {
+            mainFrame.dispose();
+            mainFrame = null; // Clear reference
+        }
+        // Start the login process again
         startApp();
     }
 }
