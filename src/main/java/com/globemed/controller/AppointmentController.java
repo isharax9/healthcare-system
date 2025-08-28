@@ -5,11 +5,11 @@ import com.globemed.appointment.AppointmentScheduler;
 import com.globemed.appointment.Doctor;
 import com.globemed.auth.IUser;
 import com.globemed.db.SchedulingDAO;
-import com.globemed.ui.AllAppointmentsDialog; // <-- NEW IMPORT
+import com.globemed.ui.AllAppointmentsDialog;
 import com.globemed.ui.AppointmentPanel;
 
 import javax.swing.*;
-import java.awt.*; // Make sure this is imported for JFrame
+import java.awt.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -20,9 +20,9 @@ import java.util.List;
 public class AppointmentController {
     private final AppointmentPanel view;
     private final SchedulingDAO dao;
-    private final AppointmentScheduler scheduler; // The Mediator
+    private final AppointmentScheduler scheduler;
     private final IUser currentUser;
-    private final JFrame mainFrame; // For parenting dialogs
+    private final JFrame mainFrame;
 
     public AppointmentController(AppointmentPanel view, JFrame mainFrame, IUser currentUser) {
         this.view = view;
@@ -32,7 +32,7 @@ public class AppointmentController {
         this.currentUser = currentUser;
         initController();
         loadInitialData();
-        applyPermissions(); // <-- NEW CALL
+        applyPermissions();
     }
 
     private void initController() {
@@ -40,12 +40,14 @@ public class AppointmentController {
         view.bookAppointmentButton.addActionListener(e -> bookNewAppointment());
         view.cancelAppointmentButton.addActionListener(e -> cancelAppointment());
         view.updateAppointmentButton.addActionListener(e -> updateAppointment());
-        view.viewAllAppointmentsButton.addActionListener(e -> showAllAppointments()); // <-- NEW LISTENER
+        view.viewAllAppointmentsButton.addActionListener(e -> showAllAppointments());
+        view.markAsDoneSelectedButton.addActionListener(e -> markSelectedAppointmentAsDone()); // <-- NEW LISTENER
 
         view.appointmentsList.addListSelectionListener(e -> {
             boolean isSelected = view.appointmentsList.getSelectedValue() != null;
-            view.updateAppointmentButton.setEnabled(isSelected);
+            view.updateAppointmentButton.setEnabled(isSelected && currentUser.hasPermission("can_update_appointment")); // Enable update based on permission
             view.cancelAppointmentButton.setEnabled(isSelected && currentUser.hasPermission("can_delete_appointment"));
+            view.markAsDoneSelectedButton.setEnabled(isSelected && currentUser.hasPermission("can_mark_appointment_done")); // <-- NEW PERMISSION CHECK
         });
     }
 
@@ -53,22 +55,17 @@ public class AppointmentController {
         view.setDoctorList(dao.getAllDoctors());
     }
 
-    // --- NEW METHOD: Apply Permissions ---
     private void applyPermissions() {
-        // Doctors and Nurses can view all appointments
         view.viewAllAppointmentsButton.setEnabled(currentUser.hasPermission("can_access_appointments"));
-
-        // Only Nurses and Admins can book appointments
         view.bookAppointmentButton.setEnabled(currentUser.hasPermission("can_book_appointment"));
-        // Only doctors can potentially update status (e.g., mark as done)
-        // For now, we enable update for all who can access appointment,
-        // but specific status changes would need further checks in the dialog or here.
-        // The "Mark as Done" button in AllAppointmentsDialog will handle its own permissions.
+        // The enable/disable for update/cancel/mark as done on selected items is handled by the ListSelectionListener.
+        // We set their initial state here (disabled) and let the listener take over when items are selected.
+        view.updateAppointmentButton.setEnabled(false);
+        view.cancelAppointmentButton.setEnabled(false);
+        view.markAsDoneSelectedButton.setEnabled(false);
     }
 
-    // --- NEW METHOD: Show All Appointments ---
     private void showAllAppointments() {
-        // Fetch all appointments
         List<Appointment> allAppointments = dao.getAllAppointments();
 
         if (allAppointments.isEmpty()) {
@@ -76,16 +73,14 @@ public class AppointmentController {
             return;
         }
 
-        // Pass the permission for marking as done to the dialog
         AllAppointmentsDialog dialog = new AllAppointmentsDialog(
                 mainFrame,
                 allAppointments,
-                currentUser.hasPermission("can_mark_appointment_done") // Pass this permission
+                currentUser.hasPermission("can_mark_appointment_done")
         );
         dialog.setVisible(true);
-        viewSchedule(); // Refresh the current schedule view after dialog closes, in case a status was changed
+        viewSchedule();
     }
-
 
     private void viewSchedule() {
         Doctor selectedDoctor = view.doctorList.getSelectedValue();
@@ -118,7 +113,7 @@ public class AppointmentController {
 
         String resultMessage = scheduler.bookAppointment(patientId, selectedDoctor, requestedDateTime, reason);
         JOptionPane.showMessageDialog(view, resultMessage, "Booking Status", JOptionPane.INFORMATION_MESSAGE);
-        viewSchedule(); // Refresh view
+        viewSchedule();
     }
 
     private void cancelAppointment() {
@@ -141,14 +136,48 @@ public class AppointmentController {
             } else {
                 JOptionPane.showMessageDialog(view, "Failed to cancel appointment.", "Error", JOptionPane.ERROR_MESSAGE);
             }
-            viewSchedule(); // Refresh view
+            viewSchedule();
+        }
+    }
+
+    // --- NEW METHOD: Mark Selected Appointment as Done ---
+    private void markSelectedAppointmentAsDone() {
+        if (!currentUser.hasPermission("can_mark_appointment_done")) {
+            JOptionPane.showMessageDialog(view, "You do not have permission to mark appointments as done.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        Appointment selectedAppointment = view.appointmentsList.getSelectedValue();
+        if (selectedAppointment == null) {
+            JOptionPane.showMessageDialog(view, "Please select an appointment to mark as done.", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if ("Done".equalsIgnoreCase(selectedAppointment.getStatus())) {
+            JOptionPane.showMessageDialog(view, "Appointment is already marked as Done.", "Information", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(view,
+                "Mark appointment #" + selectedAppointment.getAppointmentId() + " for Patient " + selectedAppointment.getPatientId() + " as Done?",
+                "Confirm Status Change", JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            selectedAppointment.setStatus("Done");
+            boolean success = dao.updateAppointment(selectedAppointment);
+
+            if (success) {
+                JOptionPane.showMessageDialog(view, "Appointment marked as Done successfully.");
+                viewSchedule(); // Refresh the current schedule view
+            } else {
+                JOptionPane.showMessageDialog(view, "Failed to update appointment status.", "Error", JOptionPane.ERROR_MESSAGE);
+                selectedAppointment.setStatus("Scheduled"); // Revert status in memory if DB update fails
+            }
         }
     }
 
     private void updateAppointment() {
-        // In a real app, update might involve changing doctor/time, which is complex.
-        // For simplicity, we just allow updating the reason for now, but a full update dialog would be needed.
-        if (!currentUser.hasPermission("can_update_appointment")) { // New permission for updating
+        if (!currentUser.hasPermission("can_update_appointment")) {
             JOptionPane.showMessageDialog(view, "You do not have permission to update appointments.", "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -166,7 +195,7 @@ public class AppointmentController {
                     newReason.trim()
             );
             updatedAppointment.setAppointmentId(selectedAppointment.getAppointmentId());
-            updatedAppointment.setStatus(selectedAppointment.getStatus()); // Keep original status unless explicitly changed
+            updatedAppointment.setStatus(selectedAppointment.getStatus());
 
             boolean success = dao.updateAppointment(updatedAppointment);
             if (success) {
@@ -174,7 +203,7 @@ public class AppointmentController {
             } else {
                 JOptionPane.showMessageDialog(view, "Failed to update appointment.", "Error", JOptionPane.ERROR_MESSAGE);
             }
-            viewSchedule(); // Refresh view
+            viewSchedule();
         }
     }
 }

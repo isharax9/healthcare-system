@@ -15,7 +15,7 @@ public class AppointmentPanel extends JPanel {
     public final JList<Doctor> doctorList = new JList<>();
     public final JSpinner dateSpinner = new JSpinner(new SpinnerDateModel());
     public final JButton viewScheduleButton = new JButton("View Schedule");
-    public final JButton viewAllAppointmentsButton = new JButton("View All Appointments"); // <-- NEW BUTTON
+    public final JButton viewAllAppointmentsButton = new JButton("View All Appointments");
     public final JList<Appointment> appointmentsList = new JList<>();
     public final JTextField patientIdField = new JTextField(10);
     public final JSpinner timeSpinner = new JSpinner(new SpinnerDateModel());
@@ -23,6 +23,7 @@ public class AppointmentPanel extends JPanel {
     public final JButton bookAppointmentButton = new JButton("Book Appointment");
     public final JButton updateAppointmentButton = new JButton("Update Selected");
     public final JButton cancelAppointmentButton = new JButton("Cancel Selected");
+    public final JButton markAsDoneSelectedButton = new JButton("Mark as Done");
 
     public AppointmentPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -40,11 +41,11 @@ public class AppointmentPanel extends JPanel {
         add(centerPanel, BorderLayout.CENTER);
 
         // --- Date Selection & Action Panel ---
-        JPanel dateAndActionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT)); // Renamed for clarity
+        JPanel dateAndActionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         dateAndActionPanel.setBorder(new TitledBorder("2. Schedule Actions"));
 
         JPanel dateSelectionSubPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        dateSelectionSubPanel.add(new JLabel("Date:")); // Label for date spinner
+        dateSelectionSubPanel.add(new JLabel("Date:"));
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd");
         dateSpinner.setEditor(dateEditor);
         dateSpinner.setValue(new java.util.Date());
@@ -52,9 +53,9 @@ public class AppointmentPanel extends JPanel {
         dateSelectionSubPanel.add(viewScheduleButton);
 
         dateAndActionPanel.add(dateSelectionSubPanel);
-        dateAndActionPanel.add(viewAllAppointmentsButton); // <-- ADD THE NEW BUTTON HERE
+        dateAndActionPanel.add(viewAllAppointmentsButton);
 
-        centerPanel.add(dateAndActionPanel, BorderLayout.NORTH); // Use the combined panel
+        centerPanel.add(dateAndActionPanel, BorderLayout.NORTH);
 
         // --- Schedule Display Panel with action buttons ---
         JPanel schedulePanel = new JPanel(new BorderLayout(0, 5));
@@ -64,6 +65,7 @@ public class AppointmentPanel extends JPanel {
 
         JPanel scheduleActions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         scheduleActions.add(updateAppointmentButton);
+        scheduleActions.add(markAsDoneSelectedButton); // <-- ADD THE NEW BUTTON HERE
         scheduleActions.add(cancelAppointmentButton);
         schedulePanel.add(scheduleActions, BorderLayout.SOUTH);
         centerPanel.add(schedulePanel, BorderLayout.CENTER);
@@ -88,7 +90,8 @@ public class AppointmentPanel extends JPanel {
         // Initial state
         updateAppointmentButton.setEnabled(false);
         cancelAppointmentButton.setEnabled(false);
-        viewAllAppointmentsButton.setEnabled(false); // Initially disabled, controller will enable
+        viewAllAppointmentsButton.setEnabled(false);
+        markAsDoneSelectedButton.setEnabled(false); // <-- Initially disabled
     }
 
     public void setDoctorList(List<Doctor> doctors) {
@@ -116,7 +119,7 @@ public class AppointmentPanel extends JPanel {
             super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
             if (value instanceof Appointment) {
                 Appointment appt = (Appointment) value;
-                setText(String.format("%s - Patient: %s, Reason: %s - Status: %s", // Show status
+                setText(String.format("%s - Patient: %s, Reason: %s - Status: %s",
                         appt.getAppointmentDateTime().format(formatter),
                         appt.getPatientId(),
                         appt.getReason(),
