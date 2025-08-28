@@ -14,6 +14,14 @@ public class NurseRole extends UserRoleDecorator {
                 "can_generate_reports".equals(permission))  {
             return true;
         }
+        // Nurses DO NOT have permissions like:
+        // "can_delete_patient"
+        // "can_delete_appointment"
+        // "can_delete_bill"
+        // "can_mark_appointment_done"
+        // "can_update_appointment"
+        // "can_access_billing"
+
         return super.hasPermission(permission);
     }
 }
