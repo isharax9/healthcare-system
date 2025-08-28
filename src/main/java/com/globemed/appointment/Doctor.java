@@ -17,7 +17,7 @@ public class Doctor {
 
     @Override
     public String toString() {
-        // This will be displayed in the JList in our UI
-        return fullName + " (" + specialty + ")";
+        // --- MODIFIED: Include Doctor ID in display ---
+        return String.format("%s (%s) - Doc ID: %s", fullName, specialty, doctorId);
     }
 }

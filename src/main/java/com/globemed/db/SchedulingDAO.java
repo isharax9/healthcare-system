@@ -30,6 +30,96 @@ public class SchedulingDAO {
         return doctors;
     }
 
+    // --- NEW METHOD: Get Doctor by ID ---
+    /**
+     * Fetches a doctor record from the database by their ID.
+     * @param doctorId The ID of the doctor to retrieve.
+     * @return A Doctor object, or null if not found.
+     */
+    public Doctor getDoctorById(String doctorId) {
+        String sql = "SELECT * FROM doctors WHERE doctor_id = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, doctorId);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return new Doctor(
+                        rs.getString("doctor_id"),
+                        rs.getString("full_name"),
+                        rs.getString("specialty")
+                );
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching doctor by ID: " + e.getMessage());
+        }
+        return null;
+    }
+
+    // --- NEW METHOD: Create Doctor ---
+    /**
+     * Creates a new doctor record in the database.
+     * @param doctor The Doctor object to create.
+     * @return true if creation was successful, false otherwise.
+     */
+    public boolean createDoctor(Doctor doctor) {
+        // Prevent creating a doctor with an existing ID
+        if (getDoctorById(doctor.getDoctorId()) != null) {
+            System.err.println("Error: Doctor with ID " + doctor.getDoctorId() + " already exists.");
+            return false;
+        }
+        String sql = "INSERT INTO doctors (doctor_id, full_name, specialty) VALUES (?, ?, ?)";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, doctor.getDoctorId());
+            pstmt.setString(2, doctor.getFullName());
+            pstmt.setString(3, doctor.getSpecialty());
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error creating doctor: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // --- NEW METHOD: Update Doctor ---
+    /**
+     * Updates an existing doctor record in the database.
+     * @param doctor The Doctor object to update.
+     * @return true if the update was successful, false otherwise.
+     */
+    public boolean updateDoctor(Doctor doctor) {
+        String sql = "UPDATE doctors SET full_name = ?, specialty = ? WHERE doctor_id = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, doctor.getFullName());
+            pstmt.setString(2, doctor.getSpecialty());
+            pstmt.setString(3, doctor.getDoctorId());
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating doctor: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // --- NEW METHOD: Delete Doctor ---
+    /**
+     * Deletes a doctor from the database by their ID.
+     * @param doctorId The ID of the doctor to delete.
+     * @return true if the deletion was successful, false otherwise.
+     */
+    public boolean deleteDoctor(String doctorId) {
+        String sql = "DELETE FROM doctors WHERE doctor_id = ?";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, doctorId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error deleting doctor: " + e.getMessage());
+            return false;
+        }
+    }
+
     public List<Appointment> getAppointmentsForDoctorOnDate(String doctorId, LocalDate date) {
         List<Appointment> appointments = new ArrayList<>();
         String sql = "SELECT * FROM appointments WHERE doctor_id = ? AND DATE(appointment_datetime) = ?";
@@ -93,7 +183,7 @@ public class SchedulingDAO {
         List<Appointment> appointments = new ArrayList<>();
         String sql = "SELECT * FROM appointments ORDER BY appointment_datetime DESC";
         try (Connection conn = DatabaseManager.getConnection();
-             Statement stmt = conn.createStatement(); // Using Statement for no parameters
+             Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 Appointment appt = new Appointment(

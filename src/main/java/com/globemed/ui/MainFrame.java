@@ -22,7 +22,7 @@ public class MainFrame extends JFrame {
         this.appInstance = appInstance; // Store the app instance
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1200, 800);
+        setSize(1250, 800);
         setLocationRelativeTo(null);
 
         initComponents();
