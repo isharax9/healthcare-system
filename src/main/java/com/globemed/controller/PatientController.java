@@ -45,6 +45,8 @@ public class PatientController {
         view.deleteButton.addActionListener(e -> deletePatient());
         view.undoButton.addActionListener(e -> undoChanges());
         view.viewAllButton.addActionListener(e -> showAllPatients());
+
+        view.viewAllButton.setEnabled(currentUser.hasPermission("can_view_all_patients"));
     }
 
     private void showAllPatients() {
