@@ -23,7 +23,7 @@ public class AppointmentPanel extends JPanel {
     public final JButton bookAppointmentButton = new JButton("Book Appointment");
     public final JButton updateAppointmentButton = new JButton("Update Selected");
     public final JButton cancelAppointmentButton = new JButton("Cancel Selected");
-    public final JButton markAsDoneSelectedButton = new JButton("Mark as Done");
+    public final JButton markAsDoneSelectedButton = new JButton("Mark Selected as Done"); // Corrected button name
 
     public AppointmentPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -65,7 +65,7 @@ public class AppointmentPanel extends JPanel {
 
         JPanel scheduleActions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         scheduleActions.add(updateAppointmentButton);
-        scheduleActions.add(markAsDoneSelectedButton); // <-- ADD THE NEW BUTTON HERE
+        scheduleActions.add(markAsDoneSelectedButton);
         scheduleActions.add(cancelAppointmentButton);
         schedulePanel.add(scheduleActions, BorderLayout.SOUTH);
         centerPanel.add(schedulePanel, BorderLayout.CENTER);
@@ -91,7 +91,7 @@ public class AppointmentPanel extends JPanel {
         updateAppointmentButton.setEnabled(false);
         cancelAppointmentButton.setEnabled(false);
         viewAllAppointmentsButton.setEnabled(false);
-        markAsDoneSelectedButton.setEnabled(false); // <-- Initially disabled
+        markAsDoneSelectedButton.setEnabled(false);
     }
 
     public void setDoctorList(List<Doctor> doctors) {
@@ -112,16 +112,19 @@ public class AppointmentPanel extends JPanel {
 
     // Custom renderer class to make the JList<Appointment> display readable text
     private static class AppointmentListRenderer extends DefaultListCellRenderer {
-        private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
             super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
             if (value instanceof Appointment) {
                 Appointment appt = (Appointment) value;
-                setText(String.format("%s - Patient: %s, Reason: %s - Status: %s",
+                // --- MODIFIED: Include Appointment ID ---
+                setText(String.format("Appointment ID: %d | %s - Patient: %s | Doctor: %s | Reason: %s | Status: %s",
+                        appt.getAppointmentId(),
                         appt.getAppointmentDateTime().format(formatter),
                         appt.getPatientId(),
+                        appt.getDoctorId(), // Display Doctor ID
                         appt.getReason(),
                         appt.getStatus()
                 ));

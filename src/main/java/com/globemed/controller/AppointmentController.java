@@ -79,7 +79,6 @@ public class AppointmentController {
                 currentUser.hasPermission("can_mark_appointment_done")
         );
         dialog.setVisible(true);
-        viewSchedule();
     }
 
     private void viewSchedule() {
