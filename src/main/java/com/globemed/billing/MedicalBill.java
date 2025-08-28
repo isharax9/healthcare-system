@@ -1,8 +1,10 @@
 package com.globemed.billing;
 
 import com.globemed.insurance.InsurancePlan; // Import this
+import com.globemed.reports.ReportVisitor; // Add import
+import com.globemed.reports.Visitable;   // Add import
 
-public class MedicalBill {
+public class MedicalBill implements Visitable { // Implement Visitable
     private int billId;
     private final String patientId;
     private final String serviceDescription;
@@ -46,5 +48,11 @@ public class MedicalBill {
 
     public String getServiceDescription() {
         return serviceDescription;
+    }
+
+    // ADD THIS METHOD
+    @Override
+    public void accept(ReportVisitor visitor) {
+        visitor.visit(this);
     }
 }

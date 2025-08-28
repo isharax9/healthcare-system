@@ -9,7 +9,8 @@ public class DoctorRole extends UserRoleDecorator {
     public boolean hasPermission(String permission) {
         // Doctors can access patient and appointment tabs.
         if ("can_access_patients".equals(permission) ||
-                "can_access_appointments".equals(permission)) {
+                "can_access_appointments".equals(permission) ||
+                "can_generate_reports".equals(permission)) {
             return true;
         }
         // For any other permission, check the wrapped object.

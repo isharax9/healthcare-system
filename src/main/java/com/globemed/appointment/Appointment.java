@@ -1,8 +1,10 @@
 package com.globemed.appointment;
 
 import java.time.LocalDateTime;
+import com.globemed.reports.ReportVisitor;
+import com.globemed.reports.Visitable;
 
-public class Appointment {
+public class Appointment implements Visitable {
     private int appointmentId;
     private String patientId;
     private String doctorId;
@@ -16,6 +18,7 @@ public class Appointment {
         this.appointmentDateTime = appointmentDateTime;
         this.reason = reason;
     }
+    
     // Getters and setters...
     public int getAppointmentId() { return appointmentId; }
     public void setAppointmentId(int appointmentId) { this.appointmentId = appointmentId; }
@@ -25,4 +28,9 @@ public class Appointment {
     public String getReason() { return reason; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    @Override
+    public void accept(ReportVisitor visitor) {
+        visitor.visit(this);
+    }
 }

@@ -3,6 +3,8 @@ package com.globemed.ui;
 import com.globemed.controller.AppointmentController;
 import com.globemed.controller.PatientController;
 import com.globemed.controller.BillingController;
+import com.globemed.controller.ReportController;
+import com.globemed.ui.ReportPanel;
 import com.globemed.auth.IUser;
 
 import javax.swing.*;
@@ -48,6 +50,13 @@ public class MainFrame extends JFrame {
             // Pass the currentUser to the controller
             new BillingController(billingPanel, currentUser);
             tabbedPane.addTab("Billing", billingPanel);
+        }
+
+        // --- ADD THE REPORTS TAB WITH PERMISSION CHECK ---
+        if (currentUser.hasPermission("can_generate_reports")) {
+            ReportPanel reportPanel = new ReportPanel();
+            new ReportController(reportPanel);
+            tabbedPane.addTab("Reports", reportPanel);
         }
 
         // What if a user has no permissions at all? Show a message.

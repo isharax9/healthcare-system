@@ -3,10 +3,12 @@ package com.globemed.patient;
 import java.util.ArrayList;
 import java.util.List;
 import com.globemed.insurance.InsurancePlan;
+import com.globemed.reports.ReportVisitor;
+import com.globemed.reports.Visitable;
 
 // This class is both the Originator for the Memento pattern
 // and the Prototype for the Prototype pattern.
-public class PatientRecord implements Cloneable {
+public class PatientRecord implements Cloneable, Visitable {
 
     private String patientId;
     private String name;
@@ -93,6 +95,13 @@ public class PatientRecord implements Cloneable {
             // This should not happen since we are Cloneable
             throw new AssertionError();
         }
+    }
+
+    // --- Visitor Pattern Method ---
+
+    @Override
+    public void accept(ReportVisitor visitor) {
+        visitor.visit(this);
     }
 
     @Override
