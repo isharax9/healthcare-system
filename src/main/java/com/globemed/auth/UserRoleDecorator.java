@@ -22,6 +22,11 @@ public abstract class UserRoleDecorator implements IUser {
         return wrappedUser.getRole();
     }
 
+    @Override // <-- This must be present in UserRoleDecorator
+    public String getDoctorId() {
+        return wrappedUser.getDoctorId(); // Delegate to the wrapped user
+    }
+
     @Override
     public boolean hasPermission(String permission) {
         // Delegate to the wrapped user by default.

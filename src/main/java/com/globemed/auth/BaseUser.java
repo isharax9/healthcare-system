@@ -7,10 +7,13 @@ package com.globemed.auth;
 public class BaseUser implements IUser {
     private final String username;
     private final String role;
+    private final String doctorId; // <-- NEW FIELD
 
-    public BaseUser(String username, String role) {
+    // MODIFIED CONSTRUCTOR
+    public BaseUser(String username, String role, String doctorId) {
         this.username = username;
         this.role = role;
+        this.doctorId = doctorId; // Initialize new field
     }
 
     @Override
@@ -24,8 +27,12 @@ public class BaseUser implements IUser {
     }
 
     @Override
+    public String getDoctorId() { // <-- NEW GETTER IMPLEMENTATION
+        return this.doctorId;
+    }
+
+    @Override
     public boolean hasPermission(String permission) {
-        // A base user has no permissions by default.
         return false;
     }
 }

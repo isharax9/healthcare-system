@@ -10,7 +10,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.util.List; // Add this import
+import java.util.List;
 
 public class StaffController {
     private final StaffPanel view;
@@ -68,8 +68,6 @@ public class StaffController {
     }
 
     private void applyPermissions() {
-        // Main access to Staff Management is controlled at the tab level in MainFrame.
-        // Here, we control the buttons within the panel.
         boolean canManageStaff = currentUser.hasPermission("can_manage_staff");
         boolean isStaffSelected = view.staffTable.getSelectedRow() != -1;
 
@@ -77,10 +75,7 @@ public class StaffController {
         view.refreshStaffButton.setEnabled(canManageStaff);
         view.clearFormButton.setEnabled(canManageStaff);
 
-        // Add button is enabled if admin and no staff is selected (ready for new entry)
         view.addButton.setEnabled(canManageStaff && !isStaffSelected);
-
-        // Update/Delete buttons are enabled if admin and a staff is selected
         view.updateButton.setEnabled(canManageStaff && isStaffSelected);
         view.deleteButton.setEnabled(canManageStaff && isStaffSelected);
 
@@ -99,6 +94,7 @@ public class StaffController {
     private void populateFormFromTable() {
         Staff selectedStaff = view.getSelectedStaffFromTable(allStaff);
         if (selectedStaff != null) {
+            // FIX: Convert int to String for setText
             view.staffIdField.setText(String.valueOf(selectedStaff.getStaffId()));
             view.usernameField.setText(selectedStaff.getUsername());
             view.passwordField.setText(""); // Never display password
@@ -139,6 +135,7 @@ public class StaffController {
         }
 
         try {
+            // New Staff constructor now includes doctorId (though it's null by default here)
             Staff newStaff = new Staff(username, password, role);
             boolean success = dao.createStaff(newStaff);
 
@@ -211,7 +208,8 @@ public class StaffController {
         }
 
         try {
-            Staff updatedStaff = new Staff(selectedStaff.getStaffId(), username, password, role);
+            // Pass the original doctorId if staff is not changing roles
+            Staff updatedStaff = new Staff(selectedStaff.getStaffId(), username, password, role, selectedStaff.getDoctorId());
             boolean success = dao.updateStaff(updatedStaff);
 
             if (success) {

@@ -17,22 +17,36 @@ public class AppointmentScheduler {
 
     /**
      * Attempts to book an appointment after checking for conflicts.
+     * @param patientId The ID of the patient.
+     * @param doctor The doctor for the appointment.
+     * @param requestedDateTime The proposed date and time for the appointment.
+     * @param reason The reason for the appointment.
+     * @param doctorNotes Initial notes/prescription from the doctor (can be empty). <-- NEW PARAM
      * @return A status message indicating success or failure.
      */
-    public String bookAppointment(String patientId, Doctor doctor, LocalDateTime requestedDateTime, String reason) {
-        // Business Rule: Check for conflicts. For simplicity, assume appointments are 1 hour long.
+    // --- MODIFIED: New parameter for doctorNotes ---
+    public String bookAppointment(String patientId, Doctor doctor, LocalDateTime requestedDateTime, String reason, String doctorNotes) {
+        // Business Rule: Check for conflicts. Assume appointments are 30 minutes long.
         List<Appointment> existingAppointments = schedulingDAO.getAppointmentsForDoctorOnDate(doctor.getDoctorId(), requestedDateTime.toLocalDate());
 
         for (Appointment existing : existingAppointments) {
-            // Check if the requested time is within 1 hour of an existing appointment
-            if (requestedDateTime.isAfter(existing.getAppointmentDateTime().minusHours(1)) &&
-                    requestedDateTime.isBefore(existing.getAppointmentDateTime().plusHours(1))) {
-                return "Booking failed: Time slot conflicts with an existing appointment.";
+            LocalDateTime existingStart = existing.getAppointmentDateTime();
+
+            // Conflict if requested time is within 30 min of existing start time
+            // (e.g., existing at 10:00, requested at 10:15 conflicts)
+            // (e.g., existing at 10:00, requested at 09:45 conflicts)
+            // --- MODIFIED: Using 30-minute conflict rule ---
+            if (requestedDateTime.isAfter(existingStart.minusMinutes(30)) &&
+                    requestedDateTime.isBefore(existingStart.plusMinutes(30))) {
+                return "Booking failed: Time slot conflicts with an existing appointment (30-min rule).";
             }
         }
 
         // No conflicts, proceed to book
+        // --- MODIFIED: Pass doctorNotes to Appointment constructor ---
         Appointment newAppointment = new Appointment(patientId, doctor.getDoctorId(), requestedDateTime, reason);
+        newAppointment.setDoctorNotes(doctorNotes); // Set the initial notes
+
         boolean success = schedulingDAO.createAppointment(newAppointment);
 
         return success ? "Appointment booked successfully!" : "Booking failed: Could not save to database.";

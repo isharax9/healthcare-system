@@ -7,5 +7,6 @@ package com.globemed.auth;
 public interface IUser {
     String getUsername();
     String getRole();
+    String getDoctorId();
     boolean hasPermission(String permission);
 }
