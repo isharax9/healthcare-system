@@ -65,6 +65,7 @@ public class AppointmentController {
                     view.updateAppointmentButton.setEnabled(isSelected && currentUser.hasPermission("can_update_appointment"));
                     view.cancelAppointmentButton.setEnabled(isSelected && currentUser.hasPermission("can_delete_appointment"));
                     view.markAsDoneSelectedButton.setEnabled(isSelected && currentUser.hasPermission("can_mark_appointment_done"));
+
                     // Enable notes editing based on selection and if current user is the doctor for that appointment and has permission
                     Appointment selectedAppt = view.getSelectedAppointment(currentAppointments);
                     boolean canEditNotes = isSelected && selectedAppt != null && currentUser.getDoctorId() != null &&
@@ -88,7 +89,6 @@ public class AppointmentController {
 
     private void loadInitialData() {
         refreshDoctorList(); // Load doctors initially
-        // Optionally load a default schedule or clear appointment list initially
         view.setAppointmentsList(List.of()); // Clear appointments on startup
         view.clearAppointmentDetailsFields(); // Clear notes, patient ID, etc.
     }
@@ -105,7 +105,7 @@ public class AppointmentController {
     private void applyPermissions() {
         // Appointment related permissions
         // Doctors only see their own appointments, others see all via 'View All'
-        view.viewScheduleButton.setEnabled(currentUser.getDoctorId() != null); // Only doctor can view their schedule
+        view.viewScheduleButton.setEnabled(currentUser.getDoctorId() != null); // Only doctor can view their own schedule
         view.viewAllAppointmentsButton.setEnabled(currentUser.hasPermission("can_access_appointments") && currentUser.getDoctorId() == null); // Others can view all, doctor views their own schedule
         view.bookAppointmentButton.setEnabled(currentUser.hasPermission("can_book_appointment"));
 
@@ -144,7 +144,7 @@ public class AppointmentController {
         }
     }
 
-    // --- Doctor CRUD Methods (no significant changes here, just using currentDoctors list) ---
+    // --- Doctor CRUD Methods ---
     private void addDoctor() {
         if (!currentUser.hasPermission("can_manage_doctors")) {
             JOptionPane.showMessageDialog(mainFrame, "You do not have permission to add doctors.", "Access Denied", JOptionPane.ERROR_MESSAGE);
@@ -196,7 +196,7 @@ public class AppointmentController {
 
         if (success) {
             JOptionPane.showMessageDialog(view, "Doctor updated successfully!");
-            refreshDoctorList();
+            refreshDoctorList(); // Refresh the JList of doctors
         } else {
             JOptionPane.showMessageDialog(view, "Failed to update doctor.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -247,7 +247,6 @@ public class AppointmentController {
                     Date.from(selectedAppointment.getAppointmentDateTime().atZone(ZoneId.systemDefault()).toInstant()));
             view.setDoctorNotesText(selectedAppointment.getDoctorNotes()); // Populate notes field
 
-            // Notes editable only if current user is the doctor and has permission, and appointment is selected
             boolean canEditNotes = currentUser.getDoctorId() != null &&
                     currentUser.getDoctorId().equals(selectedAppointment.getDoctorId()) &&
                     currentUser.hasPermission("can_add_appointment_notes");
@@ -287,12 +286,8 @@ public class AppointmentController {
         String doctorIdToView = null;
         if (currentUser.getDoctorId() != null) { // Logged-in user is a doctor
             doctorIdToView = currentUser.getDoctorId();
-            // Automatically select their own doctor ID in the table for visual feedback
-            // This is complex with JTable, better to just load and clear other selection
-            view.doctorsTable.clearSelection(); // Clear existing selection
-            // We don't automatically select the row for the logged-in doctor here
-            // to avoid interfering with user's ability to select other doctors (if they are admin)
-            // or just to view their own as the default.
+            // Clear existing selection in the doctor table, as we are implicitly showing THEIR schedule
+            view.doctorsTable.clearSelection();
         } else { // Not a doctor, can select any doctor
             Doctor selectedDoctor = view.getSelectedDoctor(currentDoctors);
             if (selectedDoctor == null) {
@@ -319,8 +314,6 @@ public class AppointmentController {
         Doctor selectedDoctor = null;
         if (currentUser.getDoctorId() != null) {
             // Logged-in user is a doctor, auto-assign this doctor
-            // Ensure a doctor is actually selected in the UI if not explicit, for visual consistency
-            // or implicitly use the current user's doctor ID if it exists and is a Doctor role
             for (Doctor doc : currentDoctors) {
                 if (doc.getDoctorId().equals(currentUser.getDoctorId())) {
                     selectedDoctor = doc;
