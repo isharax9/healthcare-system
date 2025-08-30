@@ -95,9 +95,8 @@ public class ReportPanel extends JPanel {
 
         paymentStatusFilterComboBox.addItem("All Statuses");
         paymentStatusFilterComboBox.addItem("Paid");
-        paymentStatusFilterComboBox.addItem("Pending");
-        paymentStatusFilterComboBox.addItem("Overdue");
-        paymentStatusFilterComboBox.addItem("Partial");
+        paymentStatusFilterComboBox.addItem("Partially Paid");
+        paymentStatusFilterComboBox.addItem("Opened - Pending Payment");
 
         // Report Area
         reportArea.setFont(new Font("Monospaced", Font.PLAIN, 11));
@@ -217,17 +216,17 @@ public class ReportPanel extends JPanel {
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
 
         // Style buttons
-        generateReportButton.setPreferredSize(new Dimension(130, 30));
+        generateReportButton.setPreferredSize(new Dimension(160, 30));
         printReportButton.setPreferredSize(new Dimension(100, 30));
         exportPdfButton.setPreferredSize(new Dimension(100, 30));
         exportExcelButton.setPreferredSize(new Dimension(110, 30));
 
         generateReportButton.setBackground(new Color(70, 130, 180));
-        generateReportButton.setForeground(Color.WHITE);
+
         generateReportButton.setFont(generateReportButton.getFont().deriveFont(Font.BOLD));
 
         buttonsPanel.add(generateReportButton);
-        buttonsPanel.add(Box.createHorizontalStrut(10));
+        buttonsPanel.add(Box.createHorizontalStrut(16));
         buttonsPanel.add(printReportButton);
         buttonsPanel.add(exportPdfButton);
         buttonsPanel.add(exportExcelButton);
