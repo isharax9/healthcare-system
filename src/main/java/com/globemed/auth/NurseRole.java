@@ -11,7 +11,8 @@ public class NurseRole extends UserRoleDecorator {
                 "can_access_appointments".equals(permission) ||
                 "can_generate_reports".equals(permission) ||
                 "can_book_appointment".equals(permission) ||
-                "can_cancel_appointment".equals(permission) ) {  // NEW: Added cancel appointment permission
+                "can_cancel_appointment".equals(permission) ||
+                "can_update_appointment_reason".equals(permission) ) {  // NEW: Added cancel appointment permission
             return true;
         }
         // Nurses DO NOT have permissions like:

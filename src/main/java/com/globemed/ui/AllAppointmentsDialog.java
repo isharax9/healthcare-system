@@ -14,16 +14,12 @@ public class AllAppointmentsDialog extends JDialog {
     private final JTable appointmentsTable;
     private final SchedulingDAO schedulingDAO;
     private List<Appointment> currentAppointments; // To hold the list of appointments for reference
-    private final boolean canMarkAppointmentDone; // Permission to mark as done (implies notes editable)
+    private final boolean canMarkAppointmentDone; // Permission to mark as done
 
     // --- Filter Components ---
     private final JTextField filterDoctorIdField = new JTextField(10);
     private final JButton filterButton = new JButton("Filter by Doctor ID");
     private final JButton clearFilterButton = new JButton("Clear Filter");
-
-    // --- NEW: Doctor Notes Component ---
-    private final JTextArea doctorNotesArea = new JTextArea(4, 30); // Rows, cols for notes
-    private final JScrollPane doctorNotesScrollPane; // For the notes area
 
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -67,60 +63,40 @@ public class AllAppointmentsDialog extends JDialog {
         filterButton.addActionListener(e -> filterAppointments());
         clearFilterButton.addActionListener(e -> clearFilter());
 
-        // --- NEW: Notes Panel ---
-        JPanel notesPanel = new JPanel(new BorderLayout());
-        notesPanel.setBorder(BorderFactory.createTitledBorder("Doctor Notes/Prescription"));
-        doctorNotesArea.setLineWrap(true);
-        doctorNotesArea.setWrapStyleWord(true);
-        doctorNotesScrollPane = new JScrollPane(doctorNotesArea); // Initialize scroll pane
-        notesPanel.add(doctorNotesScrollPane, BorderLayout.CENTER);
-
-        // --- Central Panel to combine table and notes ---
-        JPanel centerCombinedPanel = new JPanel(new BorderLayout(10, 10));
-        centerCombinedPanel.add(scrollPane, BorderLayout.CENTER);
-        centerCombinedPanel.add(notesPanel, BorderLayout.SOUTH); // Notes below the table
-
         // --- Button Panel ---
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.add(markAsDoneButton);
         buttonPanel.add(closeButton);
 
-        // Set up the dialog layout
+        // Set up the dialog layout (REMOVED NOTES SECTION)
         getContentPane().setLayout(new BorderLayout(10, 10));
         getContentPane().add(filterPanel, BorderLayout.NORTH);
-        getContentPane().add(centerCombinedPanel, BorderLayout.CENTER); // Use the combined panel
+        getContentPane().add(scrollPane, BorderLayout.CENTER); // Only the table now
         getContentPane().add(buttonPanel, BorderLayout.SOUTH);
 
         // Initial states
         markAsDoneButton.setEnabled(false); // Managed by selection listener and permission
-        doctorNotesArea.setEditable(false); // Initially read-only
 
         appointmentsTable.getSelectionModel().addListSelectionListener(e -> {
             boolean rowSelected = appointmentsTable.getSelectedRow() != -1;
-            markAsDoneButton.setEnabled(rowSelected && canMarkAppointmentDone);
-            populateNotesArea(rowSelected); // Populate notes area on selection
-            doctorNotesArea.setEditable(rowSelected && canMarkAppointmentDone); // Notes editable based on permission and selection
-            doctorNotesArea.setBackground(doctorNotesArea.isEditable() ? Color.WHITE : UIManager.getColor("Panel.background"));
+            boolean canMarkSelected = rowSelected && canMarkAppointmentDone && !isSelectedAppointmentCanceled();
+            markAsDoneButton.setEnabled(canMarkSelected);
         });
 
-        setSize(900, 750); // Increased height to accommodate notes area
+        setSize(900, 600); // Reduced height since notes area is removed
         setLocationRelativeTo(parent);
     }
 
-    // --- NEW: Populate Notes Area Method ---
-    private void populateNotesArea(boolean isSelected) {
-        if (isSelected) {
-            int selectedRow = appointmentsTable.getSelectedRow();
-            if (selectedRow != -1 && selectedRow < currentAppointments.size()) {
-                Appointment selectedAppt = currentAppointments.get(selectedRow);
-                doctorNotesArea.setText(selectedAppt.getDoctorNotes() != null ? selectedAppt.getDoctorNotes() : "");
-                doctorNotesArea.setCaretPosition(0); // Scroll to top
-            }
-        } else {
-            doctorNotesArea.setText("");
+    // NEW: Check if selected appointment is canceled
+    private boolean isSelectedAppointmentCanceled() {
+        int selectedRow = appointmentsTable.getSelectedRow();
+        if (selectedRow == -1 || selectedRow >= currentAppointments.size()) {
+            return false;
         }
-    }
 
+        Appointment selectedAppt = currentAppointments.get(selectedRow);
+        return "Canceled".equalsIgnoreCase(selectedAppt.getStatus());
+    }
 
     private void populateTable(DefaultTableModel model, List<Appointment> appointmentsToDisplay) {
         model.setRowCount(0);
@@ -163,7 +139,9 @@ public class AllAppointmentsDialog extends JDialog {
 
     private void markAppointmentAsDone() {
         if (!canMarkAppointmentDone) {
-            JOptionPane.showMessageDialog(this, "You do not have permission to mark appointments as done.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "You do not have permission to mark appointments as done.\nContact system administrator for access.",
+                    "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -175,27 +153,55 @@ public class AllAppointmentsDialog extends JDialog {
 
         Appointment selectedAppt = currentAppointments.get(selectedRow);
 
+        // Check if appointment is canceled
+        if ("Canceled".equalsIgnoreCase(selectedAppt.getStatus())) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot mark a canceled appointment as done.\nCanceled appointments cannot be completed.",
+                    "Action Not Allowed", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         if ("Done".equalsIgnoreCase(selectedAppt.getStatus())) {
-            JOptionPane.showMessageDialog(this, "Appointment is already marked as Done.", "Information", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Appointment #" + selectedAppt.getAppointmentId() + " is already marked as Done.",
+                    "Information", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
         int confirm = JOptionPane.showConfirmDialog(this,
-                "Mark appointment #" + selectedAppt.getAppointmentId() + " for Patient " + selectedAppt.getPatientId() + " as Done?",
-                "Confirm Status Change", JOptionPane.YES_NO_OPTION);
+                "Mark appointment #" + selectedAppt.getAppointmentId() +
+                        " for Patient " + selectedAppt.getPatientId() +
+                        " as Done?\n\nDate/Time: " + selectedAppt.getAppointmentDateTime().format(DATETIME_FORMATTER) +
+                        "\nReason: " + selectedAppt.getReason() +
+                        "\nCurrent Status: " + selectedAppt.getStatus(),
+                "Confirm Status Change", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
+            String previousStatus = selectedAppt.getStatus();
             selectedAppt.setStatus("Done");
-            selectedAppt.setDoctorNotes(doctorNotesArea.getText().trim()); // Save notes from the area <-- NEW
+
             boolean success = schedulingDAO.updateAppointment(selectedAppt);
 
             if (success) {
-                JOptionPane.showMessageDialog(this, "Appointment marked as Done successfully.");
+                JOptionPane.showMessageDialog(this,
+                        "Appointment #" + selectedAppt.getAppointmentId() + " marked as Done successfully.\n" +
+                                "Status changed from '" + previousStatus + "' to 'Done'\n" +
+                                "Updated by: isharax9 at 2025-08-30 19:19:12 UTC",
+                        "Update Successful", JOptionPane.INFORMATION_MESSAGE);
+
+                // Refresh the table
                 populateTable((DefaultTableModel)appointmentsTable.getModel(), currentAppointments);
-                populateNotesArea(true); // Refresh notes area just in case (e.g., clears scroll)
+
+                // Clear selection to prevent accidental double-updates
+                appointmentsTable.clearSelection();
+
             } else {
-                JOptionPane.showMessageDialog(this, "Failed to update appointment status.", "Error", JOptionPane.ERROR_MESSAGE);
-                selectedAppt.setStatus("Scheduled");
+                JOptionPane.showMessageDialog(this,
+                        "Failed to update appointment status.\nPlease try again or contact system administrator.",
+                        "Update Failed", JOptionPane.ERROR_MESSAGE);
+
+                // Revert the status change
+                selectedAppt.setStatus(previousStatus);
             }
         }
     }
