@@ -11,6 +11,7 @@ import com.globemed.reports.FinancialReportVisitor;
 import com.globemed.reports.PatientSummaryReportVisitor;
 import com.globemed.reports.ReportVisitor;
 import com.globemed.ui.ReportPanel;
+import com.globemed.utils.TextReportPrinter; // <-- NEW IMPORT
 
 import javax.swing.*;
 import java.util.List;
@@ -20,15 +21,17 @@ public class ReportController {
     private final PatientDAO patientDAO;
     private final SchedulingDAO schedulingDAO;
     private final BillingDAO billingDAO;
-    private final JFrame mainFrame; // <-- Ensure this field exists
+    private final JFrame mainFrame;
     private final IUser currentUser;
     private PatientRecord currentPatient;
+    private String lastGeneratedReportTitle; // <-- NEW: To store title for printing
+    private String lastGeneratedReportContent; // <-- NEW: To store content for printing
 
-    // --- THIS IS THE CORRECTED CONSTRUCTOR ---
-    public ReportController(ReportPanel view, JFrame mainFrame, IUser currentUser) { // ADDED 'mainFrame' and 'currentUser'
+
+    public ReportController(ReportPanel view, JFrame mainFrame, IUser currentUser) {
         this.view = view;
-        this.mainFrame = mainFrame; // <-- Initialize the new field
-        this.currentUser = currentUser; // <-- Initialize the new field
+        this.mainFrame = mainFrame;
+        this.currentUser = currentUser;
         this.patientDAO = new PatientDAO();
         this.schedulingDAO = new SchedulingDAO();
         this.billingDAO = new BillingDAO();
@@ -38,6 +41,7 @@ public class ReportController {
     private void initController() {
         view.findPatientButton.addActionListener(e -> findPatient());
         view.generateReportButton.addActionListener(e -> generateReport());
+        view.printReportButton.addActionListener(e -> printReport()); // <-- NEW LISTENER
     }
 
     private void findPatient() {
@@ -53,45 +57,74 @@ public class ReportController {
             view.patientFoundLabel.setText("Status: Loaded " + currentPatient.getName());
             view.reportTypeComboBox.setEnabled(true);
             view.generateReportButton.setEnabled(true);
+            view.printReportButton.setEnabled(false); // Disable print until report is generated
+            view.reportArea.setText(""); // Clear previous report
+            lastGeneratedReportContent = null; // Clear cached content
+            lastGeneratedReportTitle = null; // Clear cached title
         } else {
             view.patientFoundLabel.setText("Status: Patient not found.");
             view.reportTypeComboBox.setEnabled(false);
             view.generateReportButton.setEnabled(false);
+            view.printReportButton.setEnabled(false); // Disable print
+            view.reportArea.setText("");
             currentPatient = null;
+            lastGeneratedReportContent = null;
+            lastGeneratedReportTitle = null;
         }
     }
 
-private void generateReport() {
-    if (currentPatient == null) {
-        JOptionPane.showMessageDialog(view, "Please find and load a patient first.", "Error", JOptionPane.ERROR_MESSAGE);
-        return;
+    private void generateReport() {
+        if (currentPatient == null) {
+            JOptionPane.showMessageDialog(view, "Please find and load a patient first.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        ReportVisitor visitor;
+        String selectedReportType = (String) view.reportTypeComboBox.getSelectedItem();
+
+        if ("Financial Report".equals(selectedReportType)) {
+            visitor = new FinancialReportVisitor();
+        } else {
+            visitor = new PatientSummaryReportVisitor();
+        }
+
+        List<Appointment> appointments = schedulingDAO.getAppointmentsByPatientId(currentPatient.getPatientId());
+        List<MedicalBill> bills = billingDAO.getBillsByPatientId(currentPatient.getPatientId());
+
+        currentPatient.accept(visitor);
+
+        for (Appointment appointment : appointments) {
+            appointment.accept(visitor);
+        }
+
+        for (MedicalBill bill : bills) {
+            bill.accept(visitor);
+        }
+
+        lastGeneratedReportContent = visitor.getReport(); // Store content
+        lastGeneratedReportTitle = selectedReportType; // Store title
+        view.reportArea.setText(lastGeneratedReportContent);
+        view.printReportButton.setEnabled(true); // Enable print button after generation
     }
 
-    // 1. Instantiate the correct visitor
-    ReportVisitor visitor;
-    String selectedReport = (String) view.reportTypeComboBox.getSelectedItem();
-    if ("Financial Report".equals(selectedReport)) {
-        visitor = new FinancialReportVisitor();
-    } else {
-        visitor = new PatientSummaryReportVisitor();
-    }
+    // --- NEW: Print Report Method ---
+    private void printReport() {
+        if (lastGeneratedReportContent == null || currentPatient == null) {
+            JOptionPane.showMessageDialog(view, "No report has been generated yet.", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-    // 2. Fetch all related data for the patient using the CORRECT DAO methods
-    List<Appointment> appointments = schedulingDAO.getAppointmentsByPatientId(currentPatient.getPatientId());
-    List<MedicalBill> bills = billingDAO.getBillsByPatientId(currentPatient.getPatientId());
-    
-    // 3. Visit each element in the object structure
-    currentPatient.accept(visitor);
-    
-    for (Appointment appointment : appointments) {
-        appointment.accept(visitor);
+        // Use the TextReportPrinter utility to generate the PDF
+        String filename = TextReportPrinter.printTextReport(
+                lastGeneratedReportTitle,
+                lastGeneratedReportContent,
+                currentPatient.getPatientId()
+        );
+
+        if (filename != null) {
+            JOptionPane.showMessageDialog(view, "Report PDF generated: " + filename, "Print Success", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(view, "Failed to generate report PDF.", "Print Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
-    
-    for (MedicalBill bill : bills) {
-        bill.accept(visitor);
-    }
-    
-    // 4. Get the final report and display it
-    view.reportArea.setText(visitor.getReport());
-}
 }
