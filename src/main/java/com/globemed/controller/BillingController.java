@@ -1,6 +1,5 @@
 package com.globemed.controller;
 
-// Add these imports
 import com.globemed.billing.BillProcessingRequest;
 import com.globemed.billing.BillingHandler;
 import com.globemed.billing.FinalBillingHandler;
@@ -56,24 +55,51 @@ public class BillingController {
         view.deleteBillButton.addActionListener(e -> deleteBill());
         view.printBillButton.addActionListener(e -> printBill());
         view.viewLogButton.addActionListener(e -> viewLog());
-        view.payNowButton.addActionListener(e -> payNow()); // NEW: Pay Now action
+        view.payNowButton.addActionListener(e -> {
+            System.out.println("Pay Now button clicked!"); // DEBUG
+            payNow();
+        });
 
         view.billsTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                boolean rowSelected = view.billsTable.getSelectedRow() != -1;
-                MedicalBill selectedBill = view.getSelectedBillFromTable(currentBills);
-
-                view.deleteBillButton.setEnabled(rowSelected && currentUser.hasPermission("can_delete_bill"));
-                view.printBillButton.setEnabled(rowSelected && selectedBill != null);
-                view.viewLogButton.setEnabled(rowSelected && selectedBill != null);
-
-                // Enable Pay Now button only if bill has remaining balance
-                boolean canPay = rowSelected && selectedBill != null &&
-                        selectedBill.getRemainingBalance() > 0.01 && // Has remaining balance
-                        currentUser.hasPermission("can_process_payments");
-                view.payNowButton.setEnabled(canPay);
+                updateButtonStates();
             }
         });
+    }
+
+    private void updateButtonStates() {
+        boolean rowSelected = view.billsTable.getSelectedRow() != -1;
+        MedicalBill selectedBill = null;
+
+        System.out.println("updateButtonStates - rowSelected: " + rowSelected); // DEBUG
+
+        if (currentBills != null && !currentBills.isEmpty() && rowSelected) {
+            selectedBill = view.getSelectedBillFromTable(currentBills);
+            System.out.println("Selected bill: " + (selectedBill != null ? selectedBill.getBillId() : "null")); // DEBUG
+        }
+
+        // Update button states
+        view.deleteBillButton.setEnabled(rowSelected && selectedBill != null && currentUser.hasPermission("can_delete_bill"));
+        view.printBillButton.setEnabled(rowSelected && selectedBill != null);
+        view.viewLogButton.setEnabled(rowSelected && selectedBill != null);
+
+        // Debug Pay Now button enabling logic
+        boolean hasPermission = currentUser.hasPermission("can_process_payments");
+        boolean hasBalance = selectedBill != null && selectedBill.getRemainingBalance() > 0.01;
+
+        System.out.println("Pay Now button logic:"); // DEBUG
+        System.out.println("  rowSelected: " + rowSelected); // DEBUG
+        System.out.println("  selectedBill != null: " + (selectedBill != null)); // DEBUG
+        System.out.println("  hasPermission (can_process_payments): " + hasPermission); // DEBUG
+        if (selectedBill != null) {
+            System.out.println("  remainingBalance: " + selectedBill.getRemainingBalance()); // DEBUG
+            System.out.println("  hasBalance > 0.01: " + hasBalance); // DEBUG
+        }
+
+        boolean canPay = rowSelected && selectedBill != null && hasBalance && hasPermission;
+        System.out.println("  Final canPay: " + canPay); // DEBUG
+
+        view.payNowButton.setEnabled(canPay);
     }
 
     private void searchBills() {
@@ -84,6 +110,25 @@ public class BillingController {
         }
 
         currentBills = billingDAO.getBillsByPatientId(patientId);
+        System.out.println("Found " + currentBills.size() + " bills for patient " + patientId); // DEBUG
+
+        // ADDED: Fix insurance amounts for existing bills that don't have it calculated
+        for (MedicalBill bill : currentBills) {
+            if (bill.getInsurancePaidAmount() == 0.0 && bill.getAmount() > bill.getFinalAmount()) {
+                // Calculate missing insurance payment
+                double insurancePayment = bill.getAmount() - bill.getFinalAmount();
+                bill.setInsurancePaidAmount(insurancePayment);
+                System.out.println("Fixed insurance amount for bill " + bill.getBillId() + ": $" + insurancePayment);
+
+                // Update in database
+                billingDAO.updateAmountPaidAndStatus(
+                        bill.getBillId(),
+                        bill.getAmountPaid(),
+                        insurancePayment,
+                        bill.getStatus()
+                );
+            }
+        }
 
         // Use the new method from BillingPanel to set the data
         view.setBillsTableData(currentBills);
@@ -91,6 +136,9 @@ public class BillingController {
         if (currentBills.isEmpty()) {
             JOptionPane.showMessageDialog(view, "No bills found for Patient ID: " + patientId, "Search Results", JOptionPane.INFORMATION_MESSAGE);
         }
+
+        // Force button state update after search
+        updateButtonStates();
     }
 
     private void deleteBill() {
@@ -166,20 +214,28 @@ public class BillingController {
         }
     }
 
-    // NEW METHOD: Handle payment processing
+    // Handle payment processing
     private void payNow() {
+        System.out.println("payNow() method called"); // DEBUG
+
         MedicalBill selectedBill = view.getSelectedBillFromTable(currentBills);
         if (selectedBill == null) {
+            System.out.println("No bill selected"); // DEBUG
             JOptionPane.showMessageDialog(view, "Please select a bill to make a payment.", "Warning", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
+        System.out.println("Selected bill ID: " + selectedBill.getBillId()); // DEBUG
+
         if (!currentUser.hasPermission("can_process_payments")) {
+            System.out.println("No permission to process payments"); // DEBUG
             JOptionPane.showMessageDialog(mainFrame, "You do not have permission to process payments.", "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         double remainingBalance = selectedBill.getRemainingBalance();
+        System.out.println("Remaining balance: " + remainingBalance); // DEBUG
+
         if (remainingBalance <= 0.01) {
             JOptionPane.showMessageDialog(view, "This bill is already fully paid.", "Payment Status", JOptionPane.INFORMATION_MESSAGE);
             return;
@@ -189,7 +245,8 @@ public class BillingController {
         String paymentAmountStr = JOptionPane.showInputDialog(view,
                 "Bill #" + selectedBill.getBillId() + " - " + selectedBill.getServiceDescription() + "\n" +
                         "Final Amount: $" + String.format("%.2f", selectedBill.getFinalAmount()) + "\n" +
-                        "Amount Paid: $" + String.format("%.2f", selectedBill.getAmountPaid()) + "\n" +
+                        "Patient Paid: $" + String.format("%.2f", selectedBill.getAmountPaid()) + "\n" +
+                        "Insurance Paid: $" + String.format("%.2f", selectedBill.getInsurancePaidAmount()) + "\n" +
                         "Remaining Balance: $" + String.format("%.2f", remainingBalance) + "\n\n" +
                         "Enter payment amount:",
                 "Process Payment",
@@ -215,17 +272,28 @@ public class BillingController {
                     }
                 }
 
-                // Process the payment
+                // Process the payment (patient payment)
                 double newAmountPaid = selectedBill.getAmountPaid() + paymentAmount;
                 String newStatus = (newAmountPaid >= selectedBill.getFinalAmount()) ? "Paid" : "Partially Paid";
 
-                boolean success = billingDAO.updateAmountPaidAndStatus(selectedBill.getBillId(), newAmountPaid, newStatus);
+                System.out.println("Processing payment: " + paymentAmount); // DEBUG
+                System.out.println("New amount paid: " + newAmountPaid); // DEBUG
+                System.out.println("Insurance paid: " + selectedBill.getInsurancePaidAmount()); // DEBUG
+                System.out.println("New status: " + newStatus); // DEBUG
+
+                boolean success = billingDAO.updateAmountPaidAndStatus(
+                        selectedBill.getBillId(),
+                        newAmountPaid,
+                        selectedBill.getInsurancePaidAmount(),
+                        newStatus
+                );
 
                 if (success) {
                     JOptionPane.showMessageDialog(view,
                             "Payment processed successfully!\n" +
                                     "Payment Amount: $" + String.format("%.2f", paymentAmount) + "\n" +
-                                    "New Total Paid: $" + String.format("%.2f", newAmountPaid) + "\n" +
+                                    "New Patient Total: $" + String.format("%.2f", newAmountPaid) + "\n" +
+                                    "Insurance Paid: $" + String.format("%.2f", selectedBill.getInsurancePaidAmount()) + "\n" +
                                     "New Status: " + newStatus,
                             "Payment Successful", JOptionPane.INFORMATION_MESSAGE);
 
@@ -291,6 +359,13 @@ public class BillingController {
         try {
             billProcessingChain.processBill(request);
 
+            // ADDED: Calculate and set insurance payment after processing
+            if (bill.getAmount() > bill.getFinalAmount()) {
+                double insurancePayment = bill.getAmount() - bill.getFinalAmount();
+                bill.setInsurancePaidAmount(insurancePayment);
+                System.out.println("Calculated insurance payment: $" + insurancePayment);
+            }
+
             // Save the processed bill to database
             int billId = billingDAO.saveBill(bill);
             if (billId > 0) {
@@ -299,7 +374,9 @@ public class BillingController {
                         "Bill processed and saved successfully!\n" +
                                 "Bill ID: " + billId + "\n" +
                                 "Final Status: " + bill.getStatus() + "\n" +
-                                "Final Amount: $" + String.format("%.2f", bill.getFinalAmount()),
+                                "Original Amount: $" + String.format("%.2f", bill.getAmount()) + "\n" +
+                                "Insurance Paid: $" + String.format("%.2f", bill.getInsurancePaidAmount()) + "\n" +
+                                "Final Amount (Patient Owes): $" + String.format("%.2f", bill.getFinalAmount()),
                         "Processing Complete", JOptionPane.INFORMATION_MESSAGE);
 
                 // Clear the form
@@ -317,6 +394,7 @@ public class BillingController {
             JOptionPane.showMessageDialog(view,
                     "Error processing bill: " + ex.getMessage(),
                     "Processing Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
     }
 }

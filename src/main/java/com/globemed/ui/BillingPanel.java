@@ -9,7 +9,6 @@ import java.awt.*;
 import java.time.LocalDateTime; // Import LocalDateTime
 import java.time.format.DateTimeFormatter; // Import DateTimeFormatter
 import java.util.List;
-import java.util.Vector;
 
 public class BillingPanel extends JPanel {
 
@@ -17,11 +16,11 @@ public class BillingPanel extends JPanel {
     public final JTextField searchPatientIdField = new JTextField(15);
     public final JButton searchBillsButton = new JButton("Search Bills");
     public final JTable billsTable = new JTable();
-    public final DefaultTableModel billsTableModel = new DefaultTableModel(); // <-- NEW: Use DefaultTableModel
+    public final DefaultTableModel billsTableModel = new DefaultTableModel();
     public final JButton viewLogButton = new JButton("View Processing Log");
     public final JButton printBillButton = new JButton("Print Selected Bill");
     public final JButton deleteBillButton = new JButton("Delete Selected Bill");
-    public final JButton payNowButton = new JButton("Pay Now"); // <-- NEW BUTTON
+    public final JButton payNowButton = new JButton("Pay Now");
 
     // --- Create New Bill Components ---
     public final JTextField createPatientIdField = new JTextField(15);
@@ -46,13 +45,13 @@ public class BillingPanel extends JPanel {
         topPanel.add(searchBarPanel, BorderLayout.NORTH);
 
         // Results table
-        billsTable.setModel(billsTableModel); // <-- Set the model
+        billsTable.setModel(billsTableModel);
         billsTable.setFillsViewportHeight(true);
-        billsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION); // Ensure single selection
+        billsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         billsTable.setRowSelectionAllowed(true);
         billsTable.setColumnSelectionAllowed(false);
         billsTable.getTableHeader().setReorderingAllowed(false);
-        billsTable.setDefaultRenderer(LocalDateTime.class, new LocalDateTimeRenderer()); // Set custom renderer for datetime
+        billsTable.setDefaultRenderer(LocalDateTime.class, new LocalDateTimeRenderer());
 
         // Set preferred column widths (adjust as needed)
         billsTable.getColumnModel().getColumn(0).setPreferredWidth(50);  // Bill ID
@@ -60,7 +59,7 @@ public class BillingPanel extends JPanel {
         billsTable.getColumnModel().getColumn(2).setPreferredWidth(150); // Service Description
         billsTable.getColumnModel().getColumn(3).setPreferredWidth(80);  // Original Amount
         billsTable.getColumnModel().getColumn(4).setPreferredWidth(80);  // Amount Paid
-        billsTable.getColumnModel().getColumn(5).setPreferredWidth(80);  // Final Amount
+        billsTable.getColumnModel().getColumn(5).setPreferredWidth(80);  // Final Amount (Patient Owes)
         billsTable.getColumnModel().getColumn(6).setPreferredWidth(120); // Status
 
         JScrollPane scrollPane = new JScrollPane(billsTable);
@@ -69,7 +68,7 @@ public class BillingPanel extends JPanel {
 
         // Action buttons for results
         JPanel resultsActionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        resultsActionPanel.add(payNowButton); // <-- NEW BUTTON
+        resultsActionPanel.add(payNowButton);
         resultsActionPanel.add(viewLogButton);
         resultsActionPanel.add(printBillButton);
         resultsActionPanel.add(deleteBillButton);
@@ -104,14 +103,14 @@ public class BillingPanel extends JPanel {
         deleteBillButton.setEnabled(false);
         printBillButton.setEnabled(false);
         viewLogButton.setEnabled(false);
-        payNowButton.setEnabled(false); // <-- NEW: Initially disabled
+        payNowButton.setEnabled(false);
     }
 
     private void initializeTableModels() {
         billsTableModel.setColumnIdentifiers(new String[]{"Bill ID", "Billed Date", "Service", "Original Amt", "Amt Paid", "Final Amt", "Status"});
     }
 
-    // --- NEW: Method to set the data for the billsTable ---
+    // FIXED: Method to set the data for the billsTable
     public void setBillsTableData(List<MedicalBill> bills) {
         billsTableModel.setRowCount(0); // Clear existing data
         if (bills == null || bills.isEmpty()) {
@@ -120,13 +119,24 @@ public class BillingPanel extends JPanel {
         } else {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
             for (MedicalBill bill : bills) {
+                // FIXED: Calculate correct patient amount
+                double patientOwes = bill.getAmount() - bill.getInsurancePaidAmount();
+                
+                // DEBUG: Print to help understand the values
+                System.out.println("BillingPanel - Bill " + bill.getBillId() + ":");
+                System.out.println("  Original: " + bill.getAmount());
+                System.out.println("  Insurance Paid: " + bill.getInsurancePaidAmount());
+                System.out.println("  Final Amount (DB): " + bill.getFinalAmount());
+                System.out.println("  Calculated Patient Owes: " + patientOwes);
+                System.out.println("  Patient Paid: " + bill.getAmountPaid());
+                
                 billsTableModel.addRow(new Object[]{
                         bill.getBillId(),
-                        bill.getBilledDateTime().format(formatter), // Format LocalDateTime
+                        bill.getBilledDateTime().format(formatter),
                         bill.getServiceDescription(),
-                        String.format("%.2f", bill.getAmount()),
-                        String.format("%.2f", bill.getAmountPaid()), // New column
-                        String.format("%.2f", bill.getFinalAmount()),
+                        String.format("%.2f", bill.getAmount()),                    // Original Amount
+                        String.format("%.2f", bill.getAmountPaid()),               // Patient Paid
+                        String.format("%.2f", patientOwes),                        // FIXED: Show what patient owes
                         bill.getStatus()
                 });
             }
@@ -135,7 +145,7 @@ public class BillingPanel extends JPanel {
         billsTable.repaint(); // Ensure repaint after model change
     }
 
-    // --- NEW: Helper method to get the selected MedicalBill from the table ---
+    // Helper method to get the selected MedicalBill from the table
     public MedicalBill getSelectedBillFromTable(List<MedicalBill> allBills) {
         int selectedRow = billsTable.getSelectedRow();
         if (selectedRow >= 0 && selectedRow < allBills.size()) {
@@ -154,7 +164,7 @@ public class BillingPanel extends JPanel {
         amountField.setText("");
     }
 
-    // --- NEW: Custom Renderer for LocalDateTime in JTable ---
+    // Custom Renderer for LocalDateTime in JTable
     private static class LocalDateTimeRenderer extends DefaultTableCellRenderer {
         private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
