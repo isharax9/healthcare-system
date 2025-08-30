@@ -13,10 +13,6 @@ import com.globemed.ui.ReportPanel;
 import com.globemed.utils.TextReportPrinter;
 
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
@@ -290,50 +286,45 @@ public class ReportController {
     }
 
     private ReportVisitor createVisitorForReportType(String reportType) {
-        switch (reportType) {
-            case "Comprehensive Financial Summary":
-                return new ComprehensiveFinancialSummaryVisitor();
-            case "Revenue Analysis Report":
-                return new RevenueAnalysisVisitor();
-            case "Outstanding Payments Report":
-                return new OutstandingPaymentsVisitor();
-            case "Payment Collection Report":
-                return new PaymentCollectionVisitor();
-            case "Service Revenue Breakdown":
-                return new ServiceRevenueBreakdownVisitor();
-            case "Doctor Revenue Performance":
-                return new DoctorRevenuePerformanceVisitor();
-            case "Insurance vs Patient Payments":
-                return new InsuranceVsPatientPaymentsVisitor();
-            case "Monthly Revenue Trends":
-                return new MonthlyRevenueTrendsVisitor();
-            case "Aged Receivables Report":
-                return new AgedReceivablesVisitor();
-            case "Payment Methods Analysis":
-                return new PaymentMethodsAnalysisVisitor();
-            case "Individual Patient Financial Summary":
-            case "Financial Report":
-                return new FinancialReportVisitor();
-            case "Patient Payment History":
-                return new PatientPaymentHistoryVisitor();
-            case "Patient Service Utilization":
-                return new PatientServiceUtilizationVisitor();
-            case "Patient Summary Report":
-            default:
-                return new PatientSummaryReportVisitor();
-        }
+        return switch (reportType) {
+            case "Comprehensive Financial Summary" -> new ComprehensiveFinancialSummaryVisitor();
+            case "Revenue Analysis Report" -> new RevenueAnalysisVisitor();
+            case "Outstanding Payments Report" -> new OutstandingPaymentsVisitor();
+            case "Payment Collection Report" -> new PaymentCollectionVisitor();
+            case "Service Revenue Breakdown" -> new ServiceRevenueBreakdownVisitor();
+            case "Doctor Revenue Performance" -> new DoctorRevenuePerformanceVisitor();
+            case "Insurance vs Patient Payments" -> new InsuranceVsPatientPaymentsVisitor();
+            case "Monthly Revenue Trends" -> new MonthlyRevenueTrendsVisitor();
+            case "Aged Receivables Report" -> new AgedReceivablesVisitor();
+            case "Payment Methods Analysis" -> new PaymentMethodsAnalysisVisitor();
+            case "Individual Patient Financial Summary", "Financial Report" -> new FinancialReportVisitor();
+            case "Patient Payment History" -> new PatientPaymentHistoryVisitor();
+            case "Patient's Service Utilization" -> new PatientServiceUtilizationVisitor();
+            default -> new PatientSummaryReportVisitor();
+        };
     }
 
+
     private void generatePatientSpecificReport(ReportVisitor visitor) {
+        processPatientData(visitor);
+        processPatientAppointments(visitor);
+        processPatientBills(visitor);
+    }
+
+    private void processPatientData(ReportVisitor visitor) {
         // Process patient data
         currentPatient.accept(visitor);
+    }
 
+    private void processPatientAppointments(ReportVisitor visitor) {
         // Get appointments for the patient
         List<Appointment> appointments = schedulingDAO.getAppointmentsByPatientId(currentPatient.getPatientId());
         for (Appointment appointment : appointments) {
             appointment.accept(visitor);
         }
+    }
 
+    private void processPatientBills(ReportVisitor visitor) {
         // Get bills for the patient within date range
         List<MedicalBill> bills = getBillsForPatientWithFilters(currentPatient.getPatientId());
         for (MedicalBill bill : bills) {

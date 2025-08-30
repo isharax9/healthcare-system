@@ -34,7 +34,7 @@ public class FinancialReportVisitor implements ReportVisitor {
         this.patientId = patient.getPatientId();
 
         reportContent.append(repeatString("=", 80)).append("\n");
-        reportContent.append("    COMPREHENSIVE FINANCIAL REPORT\n");
+        reportContent.append("    INDIVIDUAL PATIENT FINANCIAL SUMMARY\n");
         reportContent.append(repeatString("=", 80)).append("\n");
         reportContent.append("Patient: ").append(patient.getName())
                 .append(" (ID: ").append(patient.getPatientId()).append(")\n");

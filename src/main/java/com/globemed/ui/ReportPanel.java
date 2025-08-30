@@ -72,8 +72,7 @@ public class ReportPanel extends JPanel {
         // Report Categories
         reportCategoryComboBox.addItem("Financial Reports");
         reportCategoryComboBox.addItem("Patient Reports");
-        reportCategoryComboBox.addItem("Operational Reports");
-        reportCategoryComboBox.addItem("Performance Reports");
+
 
         // Financial Report Types (default selection)
         updateReportTypes("Financial Reports");
@@ -273,22 +272,8 @@ public class ReportPanel extends JPanel {
             case "Patient Reports":
                 reportTypeComboBox.addItem("Individual Patient Financial Summary");
                 reportTypeComboBox.addItem("Patient Payment History");
-                reportTypeComboBox.addItem("Patient Service Utilization");
-                reportTypeComboBox.addItem("Patient Outstanding Balance");
-                break;
+                reportTypeComboBox.addItem("Patient's Service Utilization");
 
-            case "Operational Reports":
-                reportTypeComboBox.addItem("Daily Operations Summary");
-                reportTypeComboBox.addItem("Service Utilization Report");
-                reportTypeComboBox.addItem("Appointment Revenue Correlation");
-                reportTypeComboBox.addItem("Resource Utilization Report");
-                break;
-
-            case "Performance Reports":
-                reportTypeComboBox.addItem("Doctor Performance Dashboard");
-                reportTypeComboBox.addItem("Service Profitability Analysis");
-                reportTypeComboBox.addItem("Billing Efficiency Report");
-                reportTypeComboBox.addItem("Collection Rate Analysis");
                 break;
         }
 
