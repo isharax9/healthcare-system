@@ -10,6 +10,7 @@ import com.globemed.ui.AllPatientsDialog;
 import com.globemed.ui.PatientPanel;
 
 import javax.swing.*;
+import java.util.Collections;
 import java.util.List;
 
 public class PatientController {
@@ -171,8 +172,8 @@ public class PatientController {
     private void displayPatientData() {
         view.setPatientId(currentPatient.getPatientId());
         view.setPatientName(currentPatient.getName());
-        view.setMedicalHistory(currentPatient.getMedicalHistory());
-        view.setTreatmentPlans(currentPatient.getTreatmentPlans());
+        view.setMedicalHistory(Collections.singletonList(currentPatient.getMedicalHistory()));
+        view.setTreatmentPlans(Collections.singletonList(currentPatient.getTreatmentPlans()));
         view.setSelectedInsurancePlan(currentPatient.getInsurancePlan());
     }
 }

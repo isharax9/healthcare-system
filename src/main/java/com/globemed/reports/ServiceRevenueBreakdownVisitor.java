@@ -1,0 +1,440 @@
+package com.globemed.reports;
+
+import com.globemed.appointment.Appointment;
+import com.globemed.billing.MedicalBill;
+import com.globemed.patient.PatientRecord;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+/**
+ * Service Revenue Breakdown Visitor - Fixed to match actual database schema
+ * Provides detailed analysis of revenue by service type with comprehensive metrics
+ */
+public class ServiceRevenueBreakdownVisitor implements ReportVisitor {
+    private final StringBuilder reportContent = new StringBuilder();
+    private final Map<String, ServiceData> serviceDetails = new HashMap<>();
+    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    private double totalSystemBilled = 0;
+    private double totalSystemRevenue = 0;
+    private double totalSystemOutstanding = 0;
+    private int totalBills = 0;
+
+    @Override
+    public void visit(PatientRecord patient) {
+        if (reportContent.length() == 0) {
+            reportContent.append(repeatString("=", 100)).append("\n");
+            reportContent.append("    COMPREHENSIVE SERVICE REVENUE BREAKDOWN REPORT\n");
+            reportContent.append(repeatString("=", 100)).append("\n");
+            reportContent.append("Report Date: ").append(LocalDate.now().format(dateTimeFormatter)).append("\n");
+            reportContent.append("System Version: v1.4\n");
+            reportContent.append(repeatString("=", 100)).append("\n\n");
+        }
+    }
+
+    @Override
+    public void visit(Appointment appointment) {
+        // Not used for this report
+    }
+
+    @Override
+    public void visit(MedicalBill bill) {
+        totalBills++;
+        totalSystemBilled += bill.getAmount();
+        totalSystemRevenue += bill.getTotalCollected();
+        totalSystemOutstanding += bill.getRemainingBalance();
+
+        String serviceName = bill.getServiceDescription();
+        ServiceData data = serviceDetails.getOrDefault(serviceName, new ServiceData(serviceName));
+        data.addBill(bill);
+        serviceDetails.put(serviceName, data);
+    }
+
+    @Override
+    public String getReport() {
+        generateSystemOverview();
+        generateDetailedServiceBreakdown();
+        generateServiceRankings();
+        generatePerformanceMetrics();
+        generateProfitabilityAnalysis();
+        generateServiceRecommendations();
+        return reportContent.toString();
+    }
+
+    private void generateSystemOverview() {
+        reportContent.append("🏥 SYSTEM OVERVIEW\n");
+        reportContent.append(repeatString("-", 60)).append("\n");
+        reportContent.append(String.format("Total Services Offered: %d\n", serviceDetails.size()));
+        reportContent.append(String.format("Total Bills Generated: %d\n", totalBills));
+        reportContent.append(String.format("Total Amount Billed: $%,.2f\n", totalSystemBilled));
+        reportContent.append(String.format("Total Revenue Collected: $%,.2f\n", totalSystemRevenue));
+        reportContent.append(String.format("Total Outstanding: $%,.2f\n", totalSystemOutstanding));
+
+        double systemCollectionRate = totalSystemBilled > 0 ? (totalSystemRevenue / totalSystemBilled) * 100 : 0;
+        double avgRevenuePerService = serviceDetails.size() > 0 ? totalSystemRevenue / serviceDetails.size() : 0;
+        double avgBillsPerService = serviceDetails.size() > 0 ? (double) totalBills / serviceDetails.size() : 0;
+
+        reportContent.append(String.format("System Collection Rate: %.1f%%\n", systemCollectionRate));
+        reportContent.append(String.format("Average Revenue per Service: $%,.2f\n", avgRevenuePerService));
+        reportContent.append(String.format("Average Bills per Service: %.1f\n", avgBillsPerService));
+
+        // System performance indicator
+        if (systemCollectionRate >= 95) {
+            reportContent.append("System Performance: 🟢 Excellent\n");
+        } else if (systemCollectionRate >= 85) {
+            reportContent.append("System Performance: 🟡 Good\n");
+        } else {
+            reportContent.append("System Performance: 🔴 Needs Improvement\n");
+        }
+        reportContent.append("\n");
+    }
+
+    private void generateDetailedServiceBreakdown() {
+        reportContent.append("📊 DETAILED SERVICE BREAKDOWN\n");
+        reportContent.append(repeatString("-", 120)).append("\n");
+        reportContent.append(String.format("%-35s | %-6s | %-12s | %-12s | %-12s | %-12s | %-8s | %-8s | %-8s\n",
+                "Service Name", "Count", "Total Billed", "Total Revenue", "Outstanding", "Avg Revenue", "Min", "Max", "Coll%"));
+        reportContent.append(repeatString("-", 120)).append("\n");
+
+        serviceDetails.values().stream()
+                .sorted((s1, s2) -> Double.compare(s2.getTotalRevenue(), s1.getTotalRevenue()))
+                .forEach(service -> {
+                    double percentage = totalSystemRevenue > 0 ? (service.getTotalRevenue() / totalSystemRevenue) * 100 : 0;
+                    reportContent.append(String.format("%-35s | %-6d | $%-11.2f | $%-11.2f | $%-11.2f | $%-11.2f | $%-7.2f | $%-7.2f | %6.1f%%\n",
+                            truncateString(service.getServiceName(), 35),
+                            service.getBillCount(),
+                            service.getTotalBilled(),
+                            service.getTotalRevenue(),
+                            service.getTotalOutstanding(),
+                            service.getAverageRevenue(),
+                            service.getMinAmount(),
+                            service.getMaxAmount(),
+                            service.getCollectionRate()));
+
+                    reportContent.append(String.format("%-35s   Revenue Share: %.1f%% | Patient: $%.2f | Insurance: $%.2f\n\n",
+                            "", percentage, service.getPatientRevenue(), service.getInsuranceRevenue()));
+                });
+    }
+
+    private void generateServiceRankings() {
+        reportContent.append("🏆 SERVICE RANKINGS\n");
+        reportContent.append(repeatString("-", 80)).append("\n");
+
+        // Top 5 by revenue
+        reportContent.append("💰 TOP 5 REVENUE GENERATORS:\n");
+        serviceDetails.values().stream()
+                .sorted((s1, s2) -> Double.compare(s2.getTotalRevenue(), s1.getTotalRevenue()))
+                .limit(5)
+                .forEach(service -> {
+                    double percentage = totalSystemRevenue > 0 ? (service.getTotalRevenue() / totalSystemRevenue) * 100 : 0;
+                    reportContent.append(String.format("  %s: $%,.2f (%.1f%% of total)\n",
+                            service.getServiceName(), service.getTotalRevenue(), percentage));
+                });
+
+        // Top 5 by volume
+        reportContent.append("\n📈 TOP 5 BY VOLUME:\n");
+        serviceDetails.values().stream()
+                .sorted((s1, s2) -> Integer.compare(s2.getBillCount(), s1.getBillCount()))
+                .limit(5)
+                .forEach(service -> {
+                    double percentage = totalBills > 0 ? ((double) service.getBillCount() / totalBills) * 100 : 0;
+                    reportContent.append(String.format("  %s: %d bills (%.1f%% of total)\n",
+                            service.getServiceName(), service.getBillCount(), percentage));
+                });
+
+        // Top 5 by average revenue
+        reportContent.append("\n💎 TOP 5 BY AVERAGE REVENUE:\n");
+        serviceDetails.values().stream()
+                .sorted((s1, s2) -> Double.compare(s2.getAverageRevenue(), s1.getAverageRevenue()))
+                .limit(5)
+                .forEach(service -> {
+                    reportContent.append(String.format("  %s: $%.2f avg (%d bills)\n",
+                            service.getServiceName(), service.getAverageRevenue(), service.getBillCount()));
+                });
+
+        // Top 5 by collection rate
+        reportContent.append("\n⚡ TOP 5 BY COLLECTION EFFICIENCY:\n");
+        serviceDetails.values().stream()
+                .filter(s -> s.getBillCount() >= 3) // Only services with at least 3 bills
+                .sorted((s1, s2) -> Double.compare(s2.getCollectionRate(), s1.getCollectionRate()))
+                .limit(5)
+                .forEach(service -> {
+                    reportContent.append(String.format("  %s: %.1f%% collection (%d bills)\n",
+                            service.getServiceName(), service.getCollectionRate(), service.getBillCount()));
+                });
+        reportContent.append("\n");
+    }
+
+    private void generatePerformanceMetrics() {
+        reportContent.append("📊 SERVICE PERFORMANCE METRICS\n");
+        reportContent.append(repeatString("-", 70)).append("\n");
+
+        // Calculate system averages
+        double avgCollectionRate = serviceDetails.values().stream()
+                .mapToDouble(ServiceData::getCollectionRate)
+                .average().orElse(0);
+
+        double avgRevenuePerService = serviceDetails.values().stream()
+                .mapToDouble(ServiceData::getTotalRevenue)
+                .average().orElse(0);
+
+        double avgVolumePerService = serviceDetails.values().stream()
+                .mapToInt(ServiceData::getBillCount)
+                .average().orElse(0);
+
+        reportContent.append(String.format("Average Collection Rate: %.1f%%\n", avgCollectionRate));
+        reportContent.append(String.format("Average Revenue per Service: $%,.2f\n", avgRevenuePerService));
+        reportContent.append(String.format("Average Volume per Service: %.1f bills\n", avgVolumePerService));
+
+        // Performance distribution
+        long highPerformers = serviceDetails.values().stream()
+                .filter(s -> s.getCollectionRate() > avgCollectionRate + 5)
+                .count();
+
+        long lowPerformers = serviceDetails.values().stream()
+                .filter(s -> s.getCollectionRate() < avgCollectionRate - 5)
+                .count();
+
+        long highRevenue = serviceDetails.values().stream()
+                .filter(s -> s.getTotalRevenue() > avgRevenuePerService * 1.5)
+                .count();
+
+        long lowRevenue = serviceDetails.values().stream()
+                .filter(s -> s.getTotalRevenue() < avgRevenuePerService * 0.5)
+                .count();
+
+        reportContent.append(String.format("High Collection Performers: %d services\n", highPerformers));
+        reportContent.append(String.format("Low Collection Performers: %d services\n", lowPerformers));
+        reportContent.append(String.format("High Revenue Services: %d services\n", highRevenue));
+        reportContent.append(String.format("Low Revenue Services: %d services\n", lowRevenue));
+
+        // Revenue concentration analysis
+        List<ServiceData> sortedByRevenue = serviceDetails.values().stream()
+                .sorted((s1, s2) -> Double.compare(s2.getTotalRevenue(), s1.getTotalRevenue()))
+                .toList();
+
+        int top20Percent = Math.max(1, sortedByRevenue.size() / 5);
+        double top20Revenue = sortedByRevenue.stream()
+                .limit(top20Percent)
+                .mapToDouble(ServiceData::getTotalRevenue)
+                .sum();
+
+        double revenueConcentration = totalSystemRevenue > 0 ? (top20Revenue / totalSystemRevenue) * 100 : 0;
+        reportContent.append(String.format("Revenue Concentration (Top 20%%): %.1f%%\n", revenueConcentration));
+        reportContent.append("\n");
+    }
+
+    private void generateProfitabilityAnalysis() {
+        reportContent.append("💹 PROFITABILITY ANALYSIS\n");
+        reportContent.append(repeatString("-", 80)).append("\n");
+
+        // High-margin services (high average revenue)
+        reportContent.append("💎 HIGH-MARGIN SERVICES (>$500 avg):\n");
+        serviceDetails.values().stream()
+                .filter(s -> s.getAverageRevenue() > 500)
+                .sorted((s1, s2) -> Double.compare(s2.getAverageRevenue(), s1.getAverageRevenue()))
+                .forEach(service -> {
+                    reportContent.append(String.format("  %s: $%.2f avg, %d volume, %.1f%% collection\n",
+                            service.getServiceName(), service.getAverageRevenue(),
+                            service.getBillCount(), service.getCollectionRate()));
+                });
+
+        // Volume services (high count, moderate revenue)
+        reportContent.append("\n📈 HIGH-VOLUME SERVICES (>10 bills):\n");
+        serviceDetails.values().stream()
+                .filter(s -> s.getBillCount() > 10)
+                .sorted((s1, s2) -> Integer.compare(s2.getBillCount(), s1.getBillCount()))
+                .forEach(service -> {
+                    reportContent.append(String.format("  %s: %d bills, $%.2f total, $%.2f avg\n",
+                            service.getServiceName(), service.getBillCount(),
+                            service.getTotalRevenue(), service.getAverageRevenue()));
+                });
+
+        // Underperforming services
+        reportContent.append("\n⚠️ UNDERPERFORMING SERVICES (<70% collection):\n");
+        serviceDetails.values().stream()
+                .filter(s -> s.getCollectionRate() < 70 && s.getBillCount() >= 2)
+                .sorted((s1, s2) -> Double.compare(s1.getCollectionRate(), s2.getCollectionRate()))
+                .forEach(service -> {
+                    double potentialRevenue = service.getTotalBilled() - service.getTotalRevenue();
+                    reportContent.append(String.format("  %s: %.1f%% collection, $%.2f potential revenue\n",
+                            service.getServiceName(), service.getCollectionRate(), potentialRevenue));
+                });
+
+        // Service efficiency score
+        reportContent.append("\n⚡ SERVICE EFFICIENCY SCORES:\n");
+        serviceDetails.values().stream()
+                .filter(s -> s.getBillCount() >= 3)
+                .sorted((s1, s2) -> Double.compare(s2.getEfficiencyScore(), s1.getEfficiencyScore()))
+                .limit(5)
+                .forEach(service -> {
+                    reportContent.append(String.format("  %s: %.1f efficiency score\n",
+                            service.getServiceName(), service.getEfficiencyScore()));
+                });
+        reportContent.append("\n");
+    }
+
+    private void generateServiceRecommendations() {
+        reportContent.append("💡 SERVICE STRATEGY RECOMMENDATIONS\n");
+        reportContent.append(repeatString("-", 70)).append("\n");
+
+        // Growth opportunities
+        reportContent.append("🚀 GROWTH OPPORTUNITIES:\n");
+
+        // High-margin, low-volume services
+        serviceDetails.values().stream()
+                .filter(s -> s.getAverageRevenue() > 300 && s.getBillCount() < 10)
+                .sorted((s1, s2) -> Double.compare(s2.getAverageRevenue(), s1.getAverageRevenue()))
+                .limit(3)
+                .forEach(service -> {
+                    reportContent.append(String.format("  • Expand %s: High margin ($%.2f avg) with growth potential\n",
+                            service.getServiceName(), service.getAverageRevenue()));
+                });
+
+        // Collection improvement opportunities
+        double avgCollectionRate = serviceDetails.values().stream()
+                .mapToDouble(ServiceData::getCollectionRate)
+                .average().orElse(0);
+
+        reportContent.append("\n🎯 COLLECTION IMPROVEMENTS:\n");
+        serviceDetails.values().stream()
+                .filter(s -> s.getCollectionRate() < avgCollectionRate - 10 && s.getTotalBilled() > 1000)
+                .sorted((s1, s2) -> Double.compare(s2.getTotalBilled(), s1.getTotalBilled()))
+                .limit(3)
+                .forEach(service -> {
+                    double potential = service.getTotalBilled() - service.getTotalRevenue();
+                    reportContent.append(String.format("  • Improve %s collection: $%.2f potential revenue\n",
+                            service.getServiceName(), potential));
+                });
+
+        // Service optimization
+        reportContent.append("\n⚙️ SERVICE OPTIMIZATION:\n");
+
+        // Services with high outstanding amounts
+        serviceDetails.values().stream()
+                .filter(s -> s.getTotalOutstanding() > 500)
+                .sorted((s1, s2) -> Double.compare(s2.getTotalOutstanding(), s1.getTotalOutstanding()))
+                .limit(3)
+                .forEach(service -> {
+                    reportContent.append(String.format("  • Address %s outstanding balances: $%.2f\n",
+                            service.getServiceName(), service.getTotalOutstanding()));
+                });
+
+        // Strategic recommendations
+        reportContent.append("\n📋 STRATEGIC ACTIONS:\n");
+
+        List<ServiceData> topRevenueServices = serviceDetails.values().stream()
+                .sorted((s1, s2) -> Double.compare(s2.getTotalRevenue(), s1.getTotalRevenue()))
+                .limit(3)
+                .toList();
+
+        reportContent.append("  • Focus marketing resources on top revenue generators:\n");
+        topRevenueServices.forEach(service ->
+                reportContent.append(String.format("    - %s ($%,.2f revenue)\n",
+                        service.getServiceName(), service.getTotalRevenue())));
+
+        // Service portfolio balance
+        if (serviceDetails.size() < 5) {
+            reportContent.append("  • Consider expanding service portfolio for diversification\n");
+        } else if (serviceDetails.size() > 20) {
+            reportContent.append("  • Review service portfolio for consolidation opportunities\n");
+        }
+
+        // Revenue concentration risk
+        List<ServiceData> sortedByRevenue = serviceDetails.values().stream()
+                .sorted((s1, s2) -> Double.compare(s2.getTotalRevenue(), s1.getTotalRevenue()))
+                .toList();
+
+        if (!sortedByRevenue.isEmpty()) {
+            double topServicePercentage = totalSystemRevenue > 0 ?
+                    (sortedByRevenue.get(0).getTotalRevenue() / totalSystemRevenue) * 100 : 0;
+
+            if (topServicePercentage > 40) {
+                reportContent.append("  • High revenue concentration risk - diversify service mix\n");
+            }
+        }
+
+        reportContent.append("  • Regular service performance monitoring\n");
+        reportContent.append("  • Benchmark pricing against industry standards\n");
+        reportContent.append("  • Implement service-specific collection strategies\n");
+
+        reportContent.append("\n");
+        reportContent.append(repeatString("=", 100)).append("\n");
+        reportContent.append("End of Comprehensive Service Revenue Breakdown Report\n");
+        reportContent.append(repeatString("=", 100)).append("\n");
+    }
+
+    private String repeatString(String str, int count) {
+        return str.repeat(count);
+    }
+
+    private String truncateString(String str, int maxLength) {
+        if (str.length() <= maxLength) return str;
+        return str.substring(0, maxLength - 3) + "...";
+    }
+
+    // Enhanced ServiceData class with comprehensive metrics
+    private static class ServiceData {
+        private final String serviceName;
+        private double totalBilled = 0;
+        private double totalRevenue = 0;
+        private double totalOutstanding = 0;
+        private double patientRevenue = 0;
+        private double insuranceRevenue = 0;
+        private int billCount = 0;
+        private double minAmount = Double.MAX_VALUE;
+        private double maxAmount = 0;
+        private final List<Double> amounts = new ArrayList<>();
+
+        public ServiceData(String serviceName) {
+            this.serviceName = serviceName;
+        }
+
+        public void addBill(MedicalBill bill) {
+            billCount++;
+            double billedAmount = bill.getAmount();
+            double collectedAmount = bill.getTotalCollected();
+
+            totalBilled += billedAmount;
+            totalRevenue += collectedAmount;
+            totalOutstanding += bill.getRemainingBalance();
+            patientRevenue += bill.getAmountPaid();
+            insuranceRevenue += bill.getInsurancePaidAmount();
+
+            amounts.add(billedAmount);
+
+            if (billedAmount < minAmount) minAmount = billedAmount;
+            if (billedAmount > maxAmount) maxAmount = billedAmount;
+        }
+
+        // Getters
+        public String getServiceName() { return serviceName; }
+        public double getTotalBilled() { return totalBilled; }
+        public double getTotalRevenue() { return totalRevenue; }
+        public double getTotalOutstanding() { return totalOutstanding; }
+        public double getPatientRevenue() { return patientRevenue; }
+        public double getInsuranceRevenue() { return insuranceRevenue; }
+        public int getBillCount() { return billCount; }
+        public double getMinAmount() { return minAmount == Double.MAX_VALUE ? 0 : minAmount; }
+        public double getMaxAmount() { return maxAmount; }
+
+        public double getAverageRevenue() {
+            return billCount > 0 ? totalRevenue / billCount : 0;
+        }
+
+        public double getCollectionRate() {
+            return totalBilled > 0 ? (totalRevenue / totalBilled) * 100 : 0;
+        }
+
+        public double getEfficiencyScore() {
+            // Composite score: collection rate (50%) + volume factor (30%) + revenue factor (20%)
+            double collectionScore = getCollectionRate();
+            double volumeScore = Math.min(100, billCount * 10); // Max score at 10+ bills
+            double revenueScore = Math.min(100, getAverageRevenue() / 10); // Max score at $1000+ avg
+
+            return (collectionScore * 0.5) + (volumeScore * 0.3) + (revenueScore * 0.2);
+        }
+    }
+}

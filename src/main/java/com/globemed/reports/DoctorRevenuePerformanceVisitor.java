@@ -1,0 +1,400 @@
+package com.globemed.reports;
+
+import com.globemed.appointment.Appointment;
+import com.globemed.billing.MedicalBill;
+import com.globemed.patient.PatientRecord;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Doctor Revenue Performance Visitor - Fixed to match actual database schema
+ * Tracks doctor performance based on appointments and associated billing
+ */
+public class DoctorRevenuePerformanceVisitor implements ReportVisitor {
+    private final StringBuilder reportContent = new StringBuilder();
+    private final Map<String, DoctorPerformance> doctorPerformance = new HashMap<>();
+    private final Map<String, String> appointmentToBillMapping = new HashMap<>();
+    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    private double totalSystemRevenue = 0;
+    private double totalSystemCollected = 0;
+    private int totalAppointments = 0;
+    private int totalBills = 0;
+
+    @Override
+    public void visit(PatientRecord patient) {
+        if (reportContent.length() == 0) {
+            reportContent.append(repeatString("=", 90)).append("\n");
+            reportContent.append("    DOCTOR REVENUE PERFORMANCE REPORT\n");
+            reportContent.append(repeatString("=", 90)).append("\n");
+            reportContent.append("Report Date: ").append(LocalDate.now().format(dateTimeFormatter)).append("\n");
+            reportContent.append("System Version: v1.4\n");
+            reportContent.append(repeatString("=", 90)).append("\n\n");
+        }
+    }
+
+    @Override
+    public void visit(Appointment appointment) {
+        totalAppointments++;
+        String doctorId = appointment.getDoctorId();
+        String patientId = appointment.getPatientId();
+
+        // Initialize doctor performance if not exists
+        DoctorPerformance performance = doctorPerformance.getOrDefault(doctorId, new DoctorPerformance(doctorId));
+        performance.addAppointment(appointment);
+        doctorPerformance.put(doctorId, performance);
+
+        // Create mapping for potential revenue attribution
+        // Using patientId + doctorId as a key to link appointments to bills
+        appointmentToBillMapping.put(patientId + "_" + doctorId, doctorId);
+    }
+
+    @Override
+    public void visit(MedicalBill bill) {
+        totalBills++;
+        totalSystemRevenue += bill.getAmount();
+        totalSystemCollected += bill.getTotalCollected();
+
+        String patientId = bill.getPatientId();
+
+        // Try to attribute revenue to doctors based on appointments
+        // This is a simplified approach - you might want to enhance this logic
+        String attributedDoctorId = findDoctorForBill(patientId);
+
+        if (attributedDoctorId != null) {
+            DoctorPerformance performance = doctorPerformance.get(attributedDoctorId);
+            if (performance != null) {
+                performance.addRevenueBill(bill);
+            }
+        } else {
+            // If no doctor can be attributed, track as "UNASSIGNED"
+            DoctorPerformance unassigned = doctorPerformance.getOrDefault("UNASSIGNED",
+                    new DoctorPerformance("UNASSIGNED"));
+            unassigned.addRevenueBill(bill);
+            doctorPerformance.put("UNASSIGNED", unassigned);
+        }
+    }
+
+    private String findDoctorForBill(String patientId) {
+        // Look for doctor who had appointments with this patient
+        // This is a simplified attribution - you might want more sophisticated logic
+        for (Map.Entry<String, String> entry : appointmentToBillMapping.entrySet()) {
+            if (entry.getKey().startsWith(patientId + "_")) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public String getReport() {
+        generateOverview();
+        generateDoctorPerformanceTable();
+        generateTopPerformers();
+        generatePerformanceMetrics();
+        generateAppointmentAnalysis();
+        generateRecommendations();
+        return reportContent.toString();
+    }
+
+    private void generateOverview() {
+        reportContent.append("👨‍⚕️ DOCTOR PERFORMANCE OVERVIEW\n");
+        reportContent.append(repeatString("-", 60)).append("\n");
+        reportContent.append(String.format("Total Doctors Analyzed: %d\n",
+                doctorPerformance.size() - (doctorPerformance.containsKey("UNASSIGNED") ? 1 : 0)));
+        reportContent.append(String.format("Total Appointments: %d\n", totalAppointments));
+        reportContent.append(String.format("Total Bills: %d\n", totalBills));
+        reportContent.append(String.format("Total System Revenue: $%,.2f\n", totalSystemRevenue));
+        reportContent.append(String.format("Total System Collected: $%,.2f\n", totalSystemCollected));
+
+        int activeDoctors = (int) doctorPerformance.values().stream()
+                .filter(d -> !"UNASSIGNED".equals(d.getDoctorId()))
+                .count();
+
+        if (activeDoctors > 0) {
+            reportContent.append(String.format("Average Revenue per Doctor: $%,.2f\n",
+                    totalSystemCollected / activeDoctors));
+            reportContent.append(String.format("Average Appointments per Doctor: %.1f\n",
+                    (double) totalAppointments / activeDoctors));
+        }
+        reportContent.append("\n");
+    }
+
+    private void generateDoctorPerformanceTable() {
+        reportContent.append("📊 INDIVIDUAL DOCTOR PERFORMANCE\n");
+        reportContent.append(repeatString("-", 100)).append("\n");
+        reportContent.append(String.format("%-12s | %-8s | %-8s | %-12s | %-12s | %-12s | %-8s | %-8s\n",
+                "Doctor ID", "Appts", "Bills", "Billed", "Collected", "Outstanding", "Coll%", "% Total"));
+        reportContent.append(repeatString("-", 100)).append("\n");
+
+        doctorPerformance.values().stream()
+                .filter(d -> !"UNASSIGNED".equals(d.getDoctorId()))
+                .sorted((d1, d2) -> Double.compare(d2.getTotalCollected(), d1.getTotalCollected()))
+                .forEach(doctor -> {
+                    double collectionRate = doctor.getTotalBilled() > 0 ?
+                            (doctor.getTotalCollected() / doctor.getTotalBilled()) * 100 : 0;
+                    double percentageOfTotal = totalSystemCollected > 0 ?
+                            (doctor.getTotalCollected() / totalSystemCollected) * 100 : 0;
+
+                    reportContent.append(String.format("%-12s | %-8d | %-8d | $%-11.2f | $%-11.2f | $%-11.2f | %6.1f%% | %6.1f%%\n",
+                            doctor.getDoctorId(),
+                            doctor.getAppointmentCount(),
+                            doctor.getBillCount(),
+                            doctor.getTotalBilled(),
+                            doctor.getTotalCollected(),
+                            doctor.getTotalOutstanding(),
+                            collectionRate,
+                            percentageOfTotal));
+                });
+
+        // Show unassigned if exists
+        if (doctorPerformance.containsKey("UNASSIGNED")) {
+            DoctorPerformance unassigned = doctorPerformance.get("UNASSIGNED");
+            reportContent.append(repeatString("-", 100)).append("\n");
+            reportContent.append(String.format("%-12s | %-8d | %-8d | $%-11.2f | $%-11.2f | $%-11.2f | %6.1f%% | %6.1f%%\n",
+                    "UNASSIGNED",
+                    unassigned.getAppointmentCount(),
+                    unassigned.getBillCount(),
+                    unassigned.getTotalBilled(),
+                    unassigned.getTotalCollected(),
+                    unassigned.getTotalOutstanding(),
+                    unassigned.getTotalBilled() > 0 ? (unassigned.getTotalCollected() / unassigned.getTotalBilled()) * 100 : 0,
+                    totalSystemCollected > 0 ? (unassigned.getTotalCollected() / totalSystemCollected) * 100 : 0));
+        }
+        reportContent.append("\n");
+    }
+
+    private void generateTopPerformers() {
+        reportContent.append("🏆 TOP PERFORMERS\n");
+        reportContent.append(repeatString("-", 70)).append("\n");
+
+        List<DoctorPerformance> sortedByRevenue = doctorPerformance.values().stream()
+                .filter(d -> !"UNASSIGNED".equals(d.getDoctorId()))
+                .sorted((d1, d2) -> Double.compare(d2.getTotalCollected(), d1.getTotalCollected()))
+                .limit(5)
+                .toList();
+
+        List<DoctorPerformance> sortedByAppointments = doctorPerformance.values().stream()
+                .filter(d -> !"UNASSIGNED".equals(d.getDoctorId()))
+                .sorted((d1, d2) -> Integer.compare(d2.getAppointmentCount(), d1.getAppointmentCount()))
+                .limit(5)
+                .toList();
+
+        List<DoctorPerformance> sortedByEfficiency = doctorPerformance.values().stream()
+                .filter(d -> !"UNASSIGNED".equals(d.getDoctorId()) && d.getAppointmentCount() > 0)
+                .sorted((d1, d2) -> Double.compare(d2.getRevenuePerAppointment(), d1.getRevenuePerAppointment()))
+                .limit(5)
+                .toList();
+
+        reportContent.append("💰 Top 5 by Revenue Collected:\n");
+        for (int i = 0; i < sortedByRevenue.size(); i++) {
+            DoctorPerformance doctor = sortedByRevenue.get(i);
+            reportContent.append(String.format("%d. Dr. %s - $%,.2f collected (%d appointments)\n",
+                    i + 1, doctor.getDoctorId(), doctor.getTotalCollected(), doctor.getAppointmentCount()));
+        }
+
+        reportContent.append("\n📅 Top 5 by Appointment Volume:\n");
+        for (int i = 0; i < sortedByAppointments.size(); i++) {
+            DoctorPerformance doctor = sortedByAppointments.get(i);
+            reportContent.append(String.format("%d. Dr. %s - %d appointments ($%,.2f collected)\n",
+                    i + 1, doctor.getDoctorId(), doctor.getAppointmentCount(), doctor.getTotalCollected()));
+        }
+
+        reportContent.append("\n⚡ Top 5 by Revenue Efficiency (Revenue/Appointment):\n");
+        for (int i = 0; i < sortedByEfficiency.size(); i++) {
+            DoctorPerformance doctor = sortedByEfficiency.get(i);
+            reportContent.append(String.format("%d. Dr. %s - $%.2f per appointment (%d total appointments)\n",
+                    i + 1, doctor.getDoctorId(), doctor.getRevenuePerAppointment(), doctor.getAppointmentCount()));
+        }
+        reportContent.append("\n");
+    }
+
+    private void generatePerformanceMetrics() {
+        reportContent.append("📈 PERFORMANCE INSIGHTS\n");
+        reportContent.append(repeatString("-", 60)).append("\n");
+
+        // Calculate system averages (excluding UNASSIGNED)
+        List<DoctorPerformance> activeDoctors = doctorPerformance.values().stream()
+                .filter(d -> !"UNASSIGNED".equals(d.getDoctorId()))
+                .toList();
+
+        if (!activeDoctors.isEmpty()) {
+            double avgAppointmentsPerDoctor = activeDoctors.stream()
+                    .mapToInt(DoctorPerformance::getAppointmentCount)
+                    .average().orElse(0);
+
+            double avgRevenuePerDoctor = activeDoctors.stream()
+                    .mapToDouble(DoctorPerformance::getTotalCollected)
+                    .average().orElse(0);
+
+            double avgRevenuePerAppointment = activeDoctors.stream()
+                    .filter(d -> d.getAppointmentCount() > 0)
+                    .mapToDouble(DoctorPerformance::getRevenuePerAppointment)
+                    .average().orElse(0);
+
+            double avgCollectionRate = activeDoctors.stream()
+                    .filter(d -> d.getTotalBilled() > 0)
+                    .mapToDouble(d -> (d.getTotalCollected() / d.getTotalBilled()) * 100)
+                    .average().orElse(0);
+
+            reportContent.append(String.format("Average Appointments per Doctor: %.1f\n", avgAppointmentsPerDoctor));
+            reportContent.append(String.format("Average Revenue per Doctor: $%,.2f\n", avgRevenuePerDoctor));
+            reportContent.append(String.format("Average Revenue per Appointment: $%.2f\n", avgRevenuePerAppointment));
+            reportContent.append(String.format("Average Collection Rate: %.1f%%\n", avgCollectionRate));
+
+            // Performance distribution
+            long highPerformers = activeDoctors.stream()
+                    .filter(d -> d.getTotalCollected() > avgRevenuePerDoctor * 1.2)
+                    .count();
+            long lowPerformers = activeDoctors.stream()
+                    .filter(d -> d.getTotalCollected() < avgRevenuePerDoctor * 0.8)
+                    .count();
+
+            reportContent.append(String.format("High Performers (>120%% avg): %d doctors\n", highPerformers));
+            reportContent.append(String.format("Low Performers (<80%% avg): %d doctors\n", lowPerformers));
+        }
+        reportContent.append("\n");
+    }
+
+    private void generateAppointmentAnalysis() {
+        reportContent.append("📅 APPOINTMENT ANALYSIS\n");
+        reportContent.append(repeatString("-", 60)).append("\n");
+
+        // Analyze appointment patterns
+        Map<String, Integer> statusCount = new HashMap<>();
+        doctorPerformance.values().stream()
+                .filter(d -> !"UNASSIGNED".equals(d.getDoctorId()))
+                .forEach(doctor -> {
+                    doctor.getAppointmentStatusBreakdown().forEach((status, count) -> {
+                        statusCount.put(status, statusCount.getOrDefault(status, 0) + count);
+                    });
+                });
+
+        reportContent.append("Appointment Status Distribution:\n");
+        statusCount.forEach((status, count) -> {
+            double percentage = totalAppointments > 0 ? ((double) count / totalAppointments) * 100 : 0;
+            reportContent.append(String.format("  %s: %d appointments (%.1f%%)\n", status, count, percentage));
+        });
+
+        // Utilization metrics
+        long doctorsWithHighUtilization = doctorPerformance.values().stream()
+                .filter(d -> !"UNASSIGNED".equals(d.getDoctorId()))
+                .filter(d -> d.getAppointmentCount() > 20)
+                .count();
+
+        reportContent.append(String.format("\nDoctors with High Utilization (>20 appointments): %d\n",
+                doctorsWithHighUtilization));
+        reportContent.append("\n");
+    }
+
+    private void generateRecommendations() {
+        reportContent.append("💡 PERFORMANCE RECOMMENDATIONS\n");
+        reportContent.append(repeatString("-", 60)).append("\n");
+
+        List<DoctorPerformance> activeDoctors = doctorPerformance.values().stream()
+                .filter(d -> !"UNASSIGNED".equals(d.getDoctorId()))
+                .toList();
+
+        if (!activeDoctors.isEmpty()) {
+            double avgRevenue = activeDoctors.stream()
+                    .mapToDouble(DoctorPerformance::getTotalCollected)
+                    .average().orElse(0);
+
+            // Find underperformers
+            List<DoctorPerformance> underperformers = activeDoctors.stream()
+                    .filter(d -> d.getTotalCollected() < avgRevenue * 0.7)
+                    .sorted((d1, d2) -> Double.compare(d1.getTotalCollected(), d2.getTotalCollected()))
+                    .limit(3)
+                    .toList();
+
+            if (!underperformers.isEmpty()) {
+                reportContent.append("📉 Focus on Underperforming Doctors:\n");
+                underperformers.forEach(doctor -> {
+                    reportContent.append(String.format("  • Dr. %s: $%.2f collected (%.1f%% of average)\n",
+                            doctor.getDoctorId(), doctor.getTotalCollected(),
+                            avgRevenue > 0 ? (doctor.getTotalCollected() / avgRevenue) * 100 : 0));
+                });
+            }
+
+            // General recommendations
+            reportContent.append("\n🎯 Strategic Recommendations:\n");
+            reportContent.append("  • Analyze high-performing doctors' best practices\n");
+            reportContent.append("  • Provide additional training for underperformers\n");
+            reportContent.append("  • Consider appointment scheduling optimization\n");
+            reportContent.append("  • Review service pricing and billing efficiency\n");
+
+            if (doctorPerformance.containsKey("UNASSIGNED")) {
+                reportContent.append("  • Improve revenue attribution to specific doctors\n");
+            }
+        }
+
+        reportContent.append("\n");
+        reportContent.append(repeatString("=", 90)).append("\n");
+        reportContent.append("End of Doctor Revenue Performance Report\n");
+        reportContent.append(repeatString("=", 90)).append("\n");
+    }
+
+    private String repeatString(String str, int count) {
+        return str.repeat(count);
+    }
+
+    public DateTimeFormatter getDateTimeFormatter() {
+        return dateTimeFormatter;
+    }
+
+    // Enhanced DoctorPerformance class with accurate financial tracking
+    private static class DoctorPerformance {
+        private final String doctorId;
+        private final List<Appointment> appointments = new ArrayList<>();
+        private final List<MedicalBill> bills = new ArrayList<>();
+        private final Map<String, Integer> appointmentStatusBreakdown = new HashMap<>();
+
+        private double totalBilled = 0;
+        private double totalCollected = 0;
+        private double totalPatientPaid = 0;
+        private double totalInsurancePaid = 0;
+        private double totalOutstanding = 0;
+
+        public DoctorPerformance(String doctorId) {
+            this.doctorId = doctorId;
+        }
+
+        public void addAppointment(Appointment appointment) {
+            appointments.add(appointment);
+            String status = appointment.getStatus();
+            appointmentStatusBreakdown.put(status,
+                    appointmentStatusBreakdown.getOrDefault(status, 0) + 1);
+        }
+
+        public void addRevenueBill(MedicalBill bill) {
+            bills.add(bill);
+            totalBilled += bill.getAmount();
+            totalPatientPaid += bill.getAmountPaid();
+            totalInsurancePaid += bill.getInsurancePaidAmount();
+            totalCollected = totalPatientPaid + totalInsurancePaid;
+            totalOutstanding += bill.getRemainingBalance();
+        }
+
+        // Getters
+        public String getDoctorId() { return doctorId; }
+        public int getAppointmentCount() { return appointments.size(); }
+        public int getBillCount() { return bills.size(); }
+        public double getTotalBilled() { return totalBilled; }
+        public double getTotalCollected() { return totalCollected; }
+        public double getTotalOutstanding() { return totalOutstanding; }
+        public Map<String, Integer> getAppointmentStatusBreakdown() { return appointmentStatusBreakdown; }
+
+        public double getRevenuePerAppointment() {
+            return appointments.size() > 0 ? totalCollected / appointments.size() : 0;
+        }
+
+        public double getCollectionRate() {
+            return totalBilled > 0 ? (totalCollected / totalBilled) * 100 : 0;
+        }
+    }
+}

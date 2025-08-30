@@ -1,0 +1,456 @@
+package com.globemed.reports;
+
+import com.globemed.appointment.Appointment;
+import com.globemed.billing.MedicalBill;
+import com.globemed.patient.PatientRecord;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Patient Service Utilization Visitor - Fixed to match actual database schema
+ * Analyzes patient's service usage patterns, appointments, and healthcare utilization
+ */
+public class PatientServiceUtilizationVisitor implements ReportVisitor {
+    private final StringBuilder reportContent = new StringBuilder();
+    private final Map<String, ServiceUtilization> serviceUsage = new HashMap<>();
+    private final Map<String, DoctorUtilization> doctorVisits = new HashMap<>();
+    private final List<Appointment> appointments = new ArrayList<>();
+    private final List<MedicalBill> bills = new ArrayList<>();
+    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    private String patientName = "";
+    private String patientId = "";
+    private double totalSpent = 0;
+    private double totalBilled = 0;
+    private int totalServices = 0;
+    private boolean headerGenerated = false; // Flag to prevent duplicate headers
+
+    @Override
+    public void visit(PatientRecord patient) {
+        // Only generate header once, even if multiple patients are processed
+        if (!headerGenerated) {
+            this.patientName = patient.getName();
+            this.patientId = patient.getPatientId();
+
+            reportContent.append(repeatString("=", 90)).append("\n");
+            reportContent.append("    PATIENTS SERVICE UTILIZATION REPORT\n");
+            reportContent.append(repeatString("=", 90)).append("\n\n");
+
+            headerGenerated = true;
+        } else {
+            // If processing additional patients, just update the current patient info
+            this.patientName = patient.getName();
+            this.patientId = patient.getPatientId();
+        }
+    }
+
+    @Override
+    public void visit(Appointment appointment) {
+        // Only process appointments for the current patient
+        if (appointment.getPatientId().equals(this.patientId)) {
+            appointments.add(appointment);
+
+            // Track doctor utilization
+            String doctorId = appointment.getDoctorId();
+            DoctorUtilization doctorUtil = doctorVisits.getOrDefault(doctorId, new DoctorUtilization(doctorId));
+            doctorUtil.addAppointment(appointment);
+            doctorVisits.put(doctorId, doctorUtil);
+        }
+    }
+
+    @Override
+    public void visit(MedicalBill bill) {
+        // Only process bills for the current patient
+        if (bill.getPatientId().equals(this.patientId)) {
+            bills.add(bill);
+            totalServices++;
+            totalBilled += bill.getAmount();
+            totalSpent += bill.getTotalCollected();
+
+            String serviceName = bill.getServiceDescription();
+            ServiceUtilization utilization = serviceUsage.getOrDefault(serviceName,
+                    new ServiceUtilization(serviceName));
+            utilization.addService(bill);
+            serviceUsage.put(serviceName, utilization);
+        }
+    }
+
+    @Override
+    public String getReport() {
+        // Only generate report if we have a patient
+        if (!headerGenerated || patientId.isEmpty()) {
+            return "No patient data available for service utilization analysis.";
+        }
+
+        generateUtilizationSummary();
+        generateAppointmentAnalysis();
+        generateServiceBreakdown();
+        generateDoctorUtilization();
+        generateUtilizationPatterns();
+        generateHealthcareValue();
+        generateRecommendations();
+        return reportContent.toString();
+    }
+
+    private void generateUtilizationSummary() {
+        reportContent.append("🏥 SERVICE UTILIZATION SUMMARY\n");
+        reportContent.append(repeatString("-", 60)).append("\n");
+        reportContent.append(String.format("Total Appointments: %d\n", appointments.size()));
+        reportContent.append(String.format("Total Services Billed: %d\n", totalServices));
+        reportContent.append(String.format("Unique Service Types: %d\n", serviceUsage.size()));
+        reportContent.append(String.format("Unique Doctors Visited: %d\n", doctorVisits.size()));
+        reportContent.append(String.format("Total Amount Billed: $%,.2f\n", totalBilled));
+        reportContent.append(String.format("Total Amount Paid: $%,.2f\n", totalSpent));
+
+        double avgServiceCost = totalServices > 0 ? totalBilled / totalServices : 0;
+        double avgAppointmentCost = appointments.size() > 0 ? totalBilled / appointments.size() : 0;
+
+        reportContent.append(String.format("Average Cost per Service: $%,.2f\n", avgServiceCost));
+        reportContent.append(String.format("Average Cost per Appointment: $%,.2f\n", avgAppointmentCost));
+
+        // Calculate utilization rate (services per appointment)
+        double utilizationRate = appointments.size() > 0 ? (double) totalServices / appointments.size() : 0;
+        reportContent.append(String.format("Services per Appointment: %.1f\n", utilizationRate));
+
+        // Patient engagement level
+        if (totalServices == 0 && appointments.size() == 0) {
+            reportContent.append("Patient Engagement: ⚪ No recorded activity\n");
+        } else if (appointments.size() > 10 && serviceUsage.size() > 5) {
+            reportContent.append("Patient Engagement: 🔴 High utilization\n");
+        } else if (appointments.size() > 5) {
+            reportContent.append("Patient Engagement: 🟡 Regular patient\n");
+        } else {
+            reportContent.append("Patient Engagement: 🟢 Moderate usage\n");
+        }
+
+        reportContent.append("\n");
+    }
+
+    private void generateAppointmentAnalysis() {
+        reportContent.append("📅 APPOINTMENT ANALYSIS\n");
+        reportContent.append(repeatString("-", 80)).append("\n");
+
+        if (appointments.isEmpty()) {
+            reportContent.append("No appointments found for this patient.\n\n");
+            return;
+        }
+
+        // Group appointments by status
+        Map<String, Long> statusCount = appointments.stream()
+                .collect(Collectors.groupingBy(Appointment::getStatus, Collectors.counting()));
+
+        reportContent.append("Appointment Status Distribution:\n");
+        statusCount.forEach((status, count) -> {
+            double percentage = appointments.size() > 0 ? (double) count / appointments.size() * 100 : 0;
+            reportContent.append(String.format("  %s: %d appointments (%.1f%%)\n", status, count, percentage));
+        });
+
+        // Recent appointments (limit to 5 most recent)
+        reportContent.append("\nRecent Appointments:\n");
+        appointments.stream()
+                .sorted((a1, a2) -> a2.getAppointmentDateTime().compareTo(a1.getAppointmentDateTime()))
+                .limit(5)
+                .forEach(apt -> {
+                    reportContent.append(String.format("  %s - Dr. %s (%s) - %s\n",
+                            apt.getAppointmentDateTime().toLocalDate(),
+                            apt.getDoctorId(),
+                            apt.getStatus(),
+                            apt.getReason() != null ? truncateString(apt.getReason(), 30) : "No reason specified"));
+                });
+
+        // Calculate appointment frequency
+        if (appointments.size() >= 2) {
+            appointments.sort(Comparator.comparing(Appointment::getAppointmentDateTime));
+            LocalDate firstAppointment = appointments.get(0).getAppointmentDateTime().toLocalDate();
+            LocalDate lastAppointment = appointments.get(appointments.size() - 1).getAppointmentDateTime().toLocalDate();
+
+            long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(firstAppointment, lastAppointment);
+            if (daysBetween > 0) {
+                double avgDaysBetween = (double) daysBetween / (appointments.size() - 1);
+                reportContent.append(String.format("\nCare Period: %s to %s\n", firstAppointment, lastAppointment));
+                reportContent.append(String.format("Average days between appointments: %.1f\n", avgDaysBetween));
+            }
+        }
+        reportContent.append("\n");
+    }
+
+    private void generateServiceBreakdown() {
+        reportContent.append("📊 SERVICE USAGE BREAKDOWN\n");
+        reportContent.append(repeatString("-", 100)).append("\n");
+        reportContent.append(String.format("%-35s | %-6s | %-12s | %-12s | %-12s | %-12s | %-8s\n",
+                "Service Type", "Count", "Total Billed", "Total Paid", "Avg Cost", "Outstanding", "% Total"));
+        reportContent.append(repeatString("-", 100)).append("\n");
+
+        if (serviceUsage.isEmpty()) {
+            reportContent.append("No services found for this patient.\n\n");
+            return;
+        }
+
+        serviceUsage.values().stream()
+                .sorted((s1, s2) -> Integer.compare(s2.getUsageCount(), s1.getUsageCount()))
+                .forEach(service -> {
+                    double percentage = totalBilled > 0 ? (service.getTotalBilled() / totalBilled) * 100 : 0;
+                    reportContent.append(String.format("%-35s | %-6d | $%-11.2f | $%-11.2f | $%-11.2f | $%-11.2f | %6.1f%%\n",
+                            truncateString(service.getServiceName(), 35),
+                            service.getUsageCount(),
+                            service.getTotalBilled(),
+                            service.getTotalPaid(),
+                            service.getAverageCost(),
+                            service.getTotalOutstanding(),
+                            percentage));
+                });
+        reportContent.append("\n");
+    }
+
+    private void generateDoctorUtilization() {
+        reportContent.append("👨‍⚕️ DOCTOR UTILIZATION\n");
+        reportContent.append(repeatString("-", 80)).append("\n");
+        reportContent.append(String.format("%-15s | %-12s | %-15s | %-20s | %-12s\n",
+                "Doctor ID", "Appointments", "Latest Visit", "Common Reasons", "Status Mix"));
+        reportContent.append(repeatString("-", 80)).append("\n");
+
+        if (doctorVisits.isEmpty()) {
+            reportContent.append("No doctor visits found for this patient.\n\n");
+            return;
+        }
+
+        doctorVisits.values().stream()
+                .sorted((d1, d2) -> Integer.compare(d2.getAppointmentCount(), d1.getAppointmentCount()))
+                .forEach(doctor -> {
+                    reportContent.append(String.format("%-15s | %-12d | %-15s | %-20s | %-12s\n",
+                            doctor.getDoctorId(),
+                            doctor.getAppointmentCount(),
+                            doctor.getLatestVisit(),
+                            truncateString(doctor.getMostCommonReason(), 20),
+                            doctor.getStatusSummary()));
+                });
+        reportContent.append("\n");
+    }
+
+    private void generateUtilizationPatterns() {
+        reportContent.append("📈 UTILIZATION PATTERNS\n");
+        reportContent.append(repeatString("-", 60)).append("\n");
+
+        // Most frequent service
+        serviceUsage.values().stream()
+                .max(Comparator.comparing(ServiceUtilization::getUsageCount))
+                .ifPresent(mostUsed -> {
+                    reportContent.append(String.format("Most Utilized Service: %s (%d times)\n",
+                            mostUsed.getServiceName(), mostUsed.getUsageCount()));
+                });
+
+        // Most expensive service
+        serviceUsage.values().stream()
+                .max(Comparator.comparing(ServiceUtilization::getTotalBilled))
+                .ifPresent(mostExpensive -> {
+                    reportContent.append(String.format("Most Expensive Service: %s ($%.2f total)\n",
+                            mostExpensive.getServiceName(), mostExpensive.getTotalBilled()));
+                });
+
+        // Highest average cost service
+        serviceUsage.values().stream()
+                .max(Comparator.comparing(ServiceUtilization::getAverageCost))
+                .ifPresent(highestAvg -> {
+                    reportContent.append(String.format("Highest Average Cost: %s ($%.2f per visit)\n",
+                            highestAvg.getServiceName(), highestAvg.getAverageCost()));
+                });
+
+        // Care coordination analysis
+        if (doctorVisits.size() > 1) {
+            reportContent.append(String.format("Multi-provider care: %d different doctors\n", doctorVisits.size()));
+            if (doctorVisits.size() > 3) {
+                reportContent.append("⚠️  Consider care coordination for multiple providers\n");
+            }
+        }
+
+        // Service diversity
+        if (serviceUsage.size() > 5) {
+            reportContent.append("High service diversity - comprehensive healthcare utilization\n");
+        } else if (serviceUsage.size() < 3 && serviceUsage.size() > 0) {
+            reportContent.append("Limited service usage - focused healthcare needs\n");
+        } else if (serviceUsage.isEmpty()) {
+            reportContent.append("No service utilization recorded\n");
+        }
+        reportContent.append("\n");
+    }
+
+    private void generateHealthcareValue() {
+        reportContent.append("💊 HEALTHCARE VALUE ANALYSIS\n");
+        reportContent.append(repeatString("-", 60)).append("\n");
+
+        if (totalBilled == 0) {
+            reportContent.append("No billing data available for value analysis.\n\n");
+            return;
+        }
+
+        double collectionRate = totalBilled > 0 ? (totalSpent / totalBilled) * 100 : 0;
+        double outstandingRate = totalBilled > 0 ? ((totalBilled - totalSpent) / totalBilled) * 100 : 0;
+
+        reportContent.append(String.format("Payment Compliance: %.1f%%\n", collectionRate));
+        reportContent.append(String.format("Outstanding Rate: %.1f%%\n", outstandingRate));
+
+        // Value indicators
+        if (appointments.size() > 10 && serviceUsage.size() > 5) {
+            reportContent.append("🟢 High healthcare engagement\n");
+        } else if (appointments.size() > 5) {
+            reportContent.append("🟡 Regular healthcare usage\n");
+        } else {
+            reportContent.append("🔴 Low healthcare utilization\n");
+        }
+
+        // Cost efficiency
+        double costPerAppointment = appointments.size() > 0 ? totalBilled / appointments.size() : 0;
+        if (costPerAppointment > 500) {
+            reportContent.append("Higher cost utilization pattern\n");
+        } else if (costPerAppointment > 200) {
+            reportContent.append("Moderate cost utilization pattern\n");
+        } else {
+            reportContent.append("Lower cost utilization pattern\n");
+        }
+        reportContent.append("\n");
+    }
+
+    private void generateRecommendations() {
+        reportContent.append("💡 UTILIZATION INSIGHTS & RECOMMENDATIONS\n");
+        reportContent.append(repeatString("-", 60)).append("\n");
+
+        // Utilization-based recommendations
+        if (appointments.size() > 15) {
+            reportContent.append("🔄 HIGH UTILIZATION PATIENT:\n");
+            reportContent.append("  • Consider preventive care programs\n");
+            reportContent.append("  • Evaluate care management opportunities\n");
+            reportContent.append("  • Review for potential chronic condition management\n");
+        } else if (appointments.size() < 3) {
+            reportContent.append("⚠️ LOW UTILIZATION PATIENT:\n");
+            reportContent.append("  • Encourage regular preventive check-ups\n");
+            reportContent.append("  • Provide health education resources\n");
+            reportContent.append("  • Consider wellness program enrollment\n");
+        } else {
+            reportContent.append("✅ BALANCED UTILIZATION:\n");
+            reportContent.append("  • Continue current healthcare engagement\n");
+            reportContent.append("  • Maintain regular appointment schedule\n");
+        }
+
+        // Service-specific recommendations
+        if (serviceUsage.size() > 7) {
+            reportContent.append("  • Consider care coordination services\n");
+            reportContent.append("  • Review for duplicate or unnecessary services\n");
+        }
+
+        // Payment-based recommendations
+        double outstandingRate = totalBilled > 0 ? ((totalBilled - totalSpent) / totalBilled) * 100 : 0;
+        if (outstandingRate > 20) {
+            reportContent.append("  • Address outstanding balances\n");
+            reportContent.append("  • Consider payment plan options\n");
+        }
+
+        // Doctor utilization recommendations
+        if (doctorVisits.size() > 4) {
+            reportContent.append("  • Designate primary care physician for coordination\n");
+        }
+
+        // Data quality recommendations
+        if (appointments.isEmpty() && bills.isEmpty()) {
+            reportContent.append("  • Verify patient data completeness\n");
+            reportContent.append("  • Check for data synchronization issues\n");
+        }
+
+        reportContent.append("\n📞 NEXT STEPS:\n");
+        reportContent.append("  • Review recommendations with patient care team\n");
+        reportContent.append("  • Schedule follow-up appointments as needed\n");
+        reportContent.append("  • Update patient care plan based on utilization patterns\n");
+
+        reportContent.append("\n");
+        reportContent.append(repeatString("=", 90)).append("\n");
+        reportContent.append("End of Patient Service Utilization Report\n");
+        reportContent.append(repeatString("=", 90)).append("\n");
+    }
+
+    private String repeatString(String str, int count) {
+        return str.repeat(count);
+    }
+
+    private String truncateString(String str, int maxLength) {
+        if (str.length() <= maxLength) return str;
+        return str.substring(0, maxLength - 3) + "...";
+    }
+
+    // ServiceUtilization class with comprehensive tracking
+    private static class ServiceUtilization {
+        private final String serviceName;
+        private int usageCount = 0;
+        private double totalBilled = 0;
+        private double totalPaid = 0;
+        private double totalOutstanding = 0;
+
+        public ServiceUtilization(String serviceName) {
+            this.serviceName = serviceName;
+        }
+
+        public void addService(MedicalBill bill) {
+            usageCount++;
+            totalBilled += bill.getAmount();
+            totalPaid += bill.getTotalCollected();
+            totalOutstanding += bill.getRemainingBalance();
+        }
+
+        public String getServiceName() { return serviceName; }
+        public int getUsageCount() { return usageCount; }
+        public double getTotalBilled() { return totalBilled; }
+        public double getTotalPaid() { return totalPaid; }
+        public double getTotalOutstanding() { return totalOutstanding; }
+        public double getAverageCost() {
+            return usageCount > 0 ? totalBilled / usageCount : 0;
+        }
+    }
+
+    // DoctorUtilization class for tracking doctor visits
+    private static class DoctorUtilization {
+        private final String doctorId;
+        private final List<Appointment> appointments = new ArrayList<>();
+        private final Map<String, Integer> reasonCount = new HashMap<>();
+        private final Map<String, Integer> statusCount = new HashMap<>();
+
+        public DoctorUtilization(String doctorId) {
+            this.doctorId = doctorId;
+        }
+
+        public void addAppointment(Appointment appointment) {
+            appointments.add(appointment);
+
+            String reason = appointment.getReason();
+            if (reason != null && !reason.trim().isEmpty()) {
+                reasonCount.put(reason, reasonCount.getOrDefault(reason, 0) + 1);
+            }
+
+            String status = appointment.getStatus();
+            statusCount.put(status, statusCount.getOrDefault(status, 0) + 1);
+        }
+
+        public String getDoctorId() { return doctorId; }
+        public int getAppointmentCount() { return appointments.size(); }
+
+        public String getLatestVisit() {
+            return appointments.stream()
+                    .max(Comparator.comparing(Appointment::getAppointmentDateTime))
+                    .map(apt -> apt.getAppointmentDateTime().toLocalDate().toString())
+                    .orElse("N/A");
+        }
+
+        public String getMostCommonReason() {
+            return reasonCount.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse("N/A");
+        }
+
+        public String getStatusSummary() {
+            return statusCount.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(entry -> entry.getKey() + "(" + entry.getValue() + ")")
+                    .orElse("N/A");
+        }
+    }
+}
