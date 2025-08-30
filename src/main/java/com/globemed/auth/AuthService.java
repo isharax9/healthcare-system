@@ -18,20 +18,28 @@ public class AuthService {
      * @return A decorated IUser object on success, or null on failure.
      */
     public IUser login(String username, String password) {
-        String sql = "SELECT role FROM staff WHERE username = ? AND password_hash = ?";
+        // --- MODIFIED: Select doctor_id from staff table ---
+        String sql = "SELECT role, doctor_id FROM staff WHERE username = ? AND password_hash = ?";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, username);
-            pstmt.setString(2, password); // In a real app, you'd hash the input password first.
+            pstmt.setString(2, password);
 
             ResultSet rs = pstmt.executeQuery();
 
             if (rs.next()) {
-                // Login successful, now decorate the user based on their role.
                 String role = rs.getString("role");
-                System.out.println("Login successful for user: " + username + " with role: " + role);
-                return decorateUser(username, role);
+                String doctorId = rs.getString("doctor_id"); // <-- NEW: Fetch doctor_id
+
+                // Check if doctor_id was NULL in the database
+                if (rs.wasNull()) {
+                    doctorId = null;
+                }
+
+                System.out.println("Login successful for user: " + username + " with role: " + role + (doctorId != null ? " (Doctor ID: " + doctorId + ")" : ""));
+                // --- MODIFIED: Pass doctorId to decorateUser ---
+                return decorateUser(username, role, doctorId);
             }
 
         } catch (SQLException e) {
@@ -39,21 +47,21 @@ public class AuthService {
         }
 
         System.out.println("Login failed for user: " + username);
-        return null; // Login failed
+        return null;
     }
 
     /**
      * Factory method to construct the appropriate decorated user object.
-     * This is where the Decorator pattern is assembled.
      * @param username The username of the logged-in user.
      * @param role The role of the logged-in user.
+     * @param doctorId The associated doctor ID, or null if not a doctor.
      * @return The fully decorated IUser object.
      */
-    private IUser decorateUser(String username, String role) {
-        // Start with a base user object
-        IUser user = new BaseUser(username, role);
+    // --- MODIFIED: New parameter for doctorId ---
+    private IUser decorateUser(String username, String role, String doctorId) {
+        // --- MODIFIED: Pass doctorId to BaseUser constructor ---
+        IUser user = new BaseUser(username, role, doctorId);
 
-        // Wrap it with the appropriate decorator based on the role string
         switch (role) {
             case "Doctor":
                 return new DoctorRole(user);
@@ -62,7 +70,6 @@ public class AuthService {
             case "Admin":
                 return new AdminRole(user);
             default:
-                // If the role from the DB is unknown, return the base user with no permissions.
                 return user;
         }
     }

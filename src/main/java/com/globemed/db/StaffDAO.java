@@ -17,7 +17,8 @@ public class StaffDAO {
      * @return Staff object if found, null otherwise.
      */
     public Staff getStaffByUsername(String username) {
-        String sql = "SELECT staff_id, username, password_hash, role FROM staff WHERE username = ?";
+        // --- MODIFIED: Include doctor_id in SELECT ---
+        String sql = "SELECT staff_id, username, password_hash, role, doctor_id FROM staff WHERE username = ?";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
@@ -27,7 +28,8 @@ public class StaffDAO {
                         rs.getInt("staff_id"),
                         rs.getString("username"),
                         rs.getString("password_hash"),
-                        rs.getString("role")
+                        rs.getString("role"),
+                        rs.getString("doctor_id") // --- NEW: Pass doctor_id to constructor ---
                 );
             }
         } catch (SQLException e) {
@@ -42,7 +44,8 @@ public class StaffDAO {
      * @return Staff object if found, null otherwise.
      */
     public Staff getStaffById(int staffId) {
-        String sql = "SELECT staff_id, username, password_hash, role FROM staff WHERE staff_id = ?";
+        // --- MODIFIED: Include doctor_id in SELECT ---
+        String sql = "SELECT staff_id, username, password_hash, role, doctor_id FROM staff WHERE staff_id = ?";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, staffId);
@@ -52,7 +55,8 @@ public class StaffDAO {
                         rs.getInt("staff_id"),
                         rs.getString("username"),
                         rs.getString("password_hash"),
-                        rs.getString("role")
+                        rs.getString("role"),
+                        rs.getString("doctor_id") // --- NEW: Pass doctor_id to constructor ---
                 );
             }
         } catch (SQLException e) {
@@ -67,7 +71,8 @@ public class StaffDAO {
      */
     public List<Staff> getAllStaff() {
         List<Staff> staffList = new ArrayList<>();
-        String sql = "SELECT staff_id, username, password_hash, role FROM staff ORDER BY username";
+        // --- MODIFIED: Include doctor_id in SELECT ---
+        String sql = "SELECT staff_id, username, password_hash, role, doctor_id FROM staff ORDER BY username";
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -76,7 +81,8 @@ public class StaffDAO {
                         rs.getInt("staff_id"),
                         rs.getString("username"),
                         rs.getString("password_hash"),
-                        rs.getString("role")
+                        rs.getString("role"),
+                        rs.getString("doctor_id") // --- NEW: Pass doctor_id to constructor ---
                 ));
             }
         } catch (SQLException e) {
@@ -91,22 +97,30 @@ public class StaffDAO {
      * @return true if creation was successful, false otherwise.
      */
     public boolean createStaff(Staff staff) {
-        // Prevent creating staff with an existing username
         if (getStaffByUsername(staff.getUsername()) != null) {
             System.err.println("Error: Staff with username '" + staff.getUsername() + "' already exists.");
             return false;
         }
-        String sql = "INSERT INTO staff (username, password_hash, role) VALUES (?, ?, ?)";
+        // --- MODIFIED: Include doctor_id in INSERT statement ---
+        String sql = "INSERT INTO staff (username, password_hash, role, doctor_id) VALUES (?, ?, ?, ?)";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, staff.getUsername());
-            pstmt.setString(2, staff.getPasswordHash()); // Remember, in a real app, hash this!
+            pstmt.setString(2, staff.getPasswordHash());
             pstmt.setString(3, staff.getRole());
+
+            // --- NEW: Set doctor_id, handling null ---
+            if (staff.getDoctorId() != null && !staff.getDoctorId().isEmpty()) {
+                pstmt.setString(4, staff.getDoctorId());
+            } else {
+                pstmt.setNull(4, java.sql.Types.VARCHAR);
+            }
+
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0) {
                 try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
-                        staff.setStaffId(generatedKeys.getInt(1)); // Set the auto-generated ID back to the object
+                        staff.setStaffId(generatedKeys.getInt(1));
                     }
                 }
                 return true;
@@ -123,13 +137,21 @@ public class StaffDAO {
      * @return true if the update was successful, false otherwise.
      */
     public boolean updateStaff(Staff staff) {
-        String sql = "UPDATE staff SET username = ?, password_hash = ?, role = ? WHERE staff_id = ?";
+        // --- MODIFIED: Include doctor_id in UPDATE statement ---
+        String sql = "UPDATE staff SET username = ?, password_hash = ?, role = ?, doctor_id = ? WHERE staff_id = ?";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, staff.getUsername());
-            pstmt.setString(2, staff.getPasswordHash()); // Update password hash as well
+            pstmt.setString(2, staff.getPasswordHash());
             pstmt.setString(3, staff.getRole());
-            pstmt.setInt(4, staff.getStaffId());
+
+            // --- NEW: Set doctor_id, handling null ---
+            if (staff.getDoctorId() != null && !staff.getDoctorId().isEmpty()) {
+                pstmt.setString(4, staff.getDoctorId());
+            } else {
+                pstmt.setNull(4, java.sql.Types.VARCHAR);
+            }
+            pstmt.setInt(5, staff.getStaffId());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Error updating staff: " + e.getMessage());

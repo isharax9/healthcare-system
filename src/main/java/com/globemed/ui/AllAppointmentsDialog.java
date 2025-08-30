@@ -14,19 +14,23 @@ public class AllAppointmentsDialog extends JDialog {
     private final JTable appointmentsTable;
     private final SchedulingDAO schedulingDAO;
     private List<Appointment> currentAppointments; // To hold the list of appointments for reference
-    private final boolean canMarkAppointmentDone;
+    private final boolean canMarkAppointmentDone; // Permission to mark as done (implies notes editable)
 
-    // --- NEW: Filter Components ---
+    // --- Filter Components ---
     private final JTextField filterDoctorIdField = new JTextField(10);
     private final JButton filterButton = new JButton("Filter by Doctor ID");
     private final JButton clearFilterButton = new JButton("Clear Filter");
+
+    // --- NEW: Doctor Notes Component ---
+    private final JTextArea doctorNotesArea = new JTextArea(4, 30); // Rows, cols for notes
+    private final JScrollPane doctorNotesScrollPane; // For the notes area
 
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public AllAppointmentsDialog(Frame parent, List<Appointment> appointments, boolean canMarkAppointmentDone) {
         super(parent, "All Appointments", true);
         this.schedulingDAO = new SchedulingDAO();
-        this.currentAppointments = appointments; // Initial list of all appointments
+        this.currentAppointments = appointments;
         this.canMarkAppointmentDone = canMarkAppointmentDone;
 
         // Create the table model
@@ -34,11 +38,12 @@ public class AllAppointmentsDialog extends JDialog {
         DefaultTableModel model = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
+                // Status column (index 5) is editable only if user has permission
                 return column == 5 && AllAppointmentsDialog.this.canMarkAppointmentDone;
             }
         };
 
-        populateTable(model, this.currentAppointments); // Populate with the initial list
+        populateTable(model, this.currentAppointments);
         appointmentsTable = new JTable(model);
         appointmentsTable.setFillsViewportHeight(true);
 
@@ -51,7 +56,7 @@ public class AllAppointmentsDialog extends JDialog {
         markAsDoneButton.addActionListener(e -> markAppointmentAsDone());
         closeButton.addActionListener(e -> dispose());
 
-        // --- Filter Panel (NEW) ---
+        // --- Filter Panel ---
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         filterPanel.setBorder(BorderFactory.createTitledBorder("Filter Appointments"));
         filterPanel.add(new JLabel("Doctor ID:"));
@@ -59,10 +64,21 @@ public class AllAppointmentsDialog extends JDialog {
         filterPanel.add(filterButton);
         filterPanel.add(clearFilterButton);
 
-        // Action listeners for filter buttons (NEW)
         filterButton.addActionListener(e -> filterAppointments());
         clearFilterButton.addActionListener(e -> clearFilter());
 
+        // --- NEW: Notes Panel ---
+        JPanel notesPanel = new JPanel(new BorderLayout());
+        notesPanel.setBorder(BorderFactory.createTitledBorder("Doctor Notes/Prescription"));
+        doctorNotesArea.setLineWrap(true);
+        doctorNotesArea.setWrapStyleWord(true);
+        doctorNotesScrollPane = new JScrollPane(doctorNotesArea); // Initialize scroll pane
+        notesPanel.add(doctorNotesScrollPane, BorderLayout.CENTER);
+
+        // --- Central Panel to combine table and notes ---
+        JPanel centerCombinedPanel = new JPanel(new BorderLayout(10, 10));
+        centerCombinedPanel.add(scrollPane, BorderLayout.CENTER);
+        centerCombinedPanel.add(notesPanel, BorderLayout.SOUTH); // Notes below the table
 
         // --- Button Panel ---
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -71,26 +87,44 @@ public class AllAppointmentsDialog extends JDialog {
 
         // Set up the dialog layout
         getContentPane().setLayout(new BorderLayout(10, 10));
-        getContentPane().add(filterPanel, BorderLayout.NORTH); // <-- ADD FILTER PANEL
-        getContentPane().add(scrollPane, BorderLayout.CENTER);
+        getContentPane().add(filterPanel, BorderLayout.NORTH);
+        getContentPane().add(centerCombinedPanel, BorderLayout.CENTER); // Use the combined panel
         getContentPane().add(buttonPanel, BorderLayout.SOUTH);
 
-        // Initial button state
-        markAsDoneButton.setEnabled(false && canMarkAppointmentDone);
+        // Initial states
+        markAsDoneButton.setEnabled(false); // Managed by selection listener and permission
+        doctorNotesArea.setEditable(false); // Initially read-only
 
         appointmentsTable.getSelectionModel().addListSelectionListener(e -> {
             boolean rowSelected = appointmentsTable.getSelectedRow() != -1;
             markAsDoneButton.setEnabled(rowSelected && canMarkAppointmentDone);
+            populateNotesArea(rowSelected); // Populate notes area on selection
+            doctorNotesArea.setEditable(rowSelected && canMarkAppointmentDone); // Notes editable based on permission and selection
+            doctorNotesArea.setBackground(doctorNotesArea.isEditable() ? Color.WHITE : UIManager.getColor("Panel.background"));
         });
 
-        setSize(900, 600);
+        setSize(900, 750); // Increased height to accommodate notes area
         setLocationRelativeTo(parent);
     }
 
+    // --- NEW: Populate Notes Area Method ---
+    private void populateNotesArea(boolean isSelected) {
+        if (isSelected) {
+            int selectedRow = appointmentsTable.getSelectedRow();
+            if (selectedRow != -1 && selectedRow < currentAppointments.size()) {
+                Appointment selectedAppt = currentAppointments.get(selectedRow);
+                doctorNotesArea.setText(selectedAppt.getDoctorNotes() != null ? selectedAppt.getDoctorNotes() : "");
+                doctorNotesArea.setCaretPosition(0); // Scroll to top
+            }
+        } else {
+            doctorNotesArea.setText("");
+        }
+    }
+
+
     private void populateTable(DefaultTableModel model, List<Appointment> appointmentsToDisplay) {
-        model.setRowCount(0); // Clear existing rows
+        model.setRowCount(0);
         if (appointmentsToDisplay == null || appointmentsToDisplay.isEmpty()) {
-            // Optionally add a "No appointments found" message
             return;
         }
         for (Appointment appt : appointmentsToDisplay) {
@@ -105,7 +139,6 @@ public class AllAppointmentsDialog extends JDialog {
         }
     }
 
-    // --- NEW METHOD: Filter Appointments ---
     private void filterAppointments() {
         String doctorId = filterDoctorIdField.getText().trim();
         if (doctorId.isEmpty()) {
@@ -113,9 +146,8 @@ public class AllAppointmentsDialog extends JDialog {
             return;
         }
 
-        // Fetch filtered appointments from the DAO
         List<Appointment> filteredList = schedulingDAO.getAppointmentsByDoctorId(doctorId);
-        currentAppointments = filteredList; // Update currentAppointments to reflect the filtered list
+        currentAppointments = filteredList;
         populateTable((DefaultTableModel)appointmentsTable.getModel(), filteredList);
 
         if (filteredList.isEmpty()) {
@@ -123,10 +155,9 @@ public class AllAppointmentsDialog extends JDialog {
         }
     }
 
-    // --- NEW METHOD: Clear Filter ---
     private void clearFilter() {
-        filterDoctorIdField.setText(""); // Clear the text field
-        currentAppointments = schedulingDAO.getAllAppointments(); // Re-fetch all appointments
+        filterDoctorIdField.setText("");
+        currentAppointments = schedulingDAO.getAllAppointments();
         populateTable((DefaultTableModel)appointmentsTable.getModel(), currentAppointments);
     }
 
@@ -142,8 +173,6 @@ public class AllAppointmentsDialog extends JDialog {
             return;
         }
 
-        // Get the Appointment object from our list using the selected row index
-        // This list might be filtered, so ensure we get the correct one
         Appointment selectedAppt = currentAppointments.get(selectedRow);
 
         if ("Done".equalsIgnoreCase(selectedAppt.getStatus())) {
@@ -157,11 +186,13 @@ public class AllAppointmentsDialog extends JDialog {
 
         if (confirm == JOptionPane.YES_OPTION) {
             selectedAppt.setStatus("Done");
+            selectedAppt.setDoctorNotes(doctorNotesArea.getText().trim()); // Save notes from the area <-- NEW
             boolean success = schedulingDAO.updateAppointment(selectedAppt);
 
             if (success) {
                 JOptionPane.showMessageDialog(this, "Appointment marked as Done successfully.");
-                populateTable((DefaultTableModel)appointmentsTable.getModel(), currentAppointments); // Refresh with potentially filtered list
+                populateTable((DefaultTableModel)appointmentsTable.getModel(), currentAppointments);
+                populateNotesArea(true); // Refresh notes area just in case (e.g., clears scroll)
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to update appointment status.", "Error", JOptionPane.ERROR_MESSAGE);
                 selectedAppt.setStatus("Scheduled");

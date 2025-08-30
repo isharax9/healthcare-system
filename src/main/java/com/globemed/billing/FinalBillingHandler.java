@@ -35,7 +35,7 @@ public class FinalBillingHandler implements BillingHandler {
         } else {
             // In a real system, you might process a co-pay or send an invoice here.
             // For now, we'll just mark it as pending patient payment.
-            bill.setStatus("Closed - Pending Patient Payment");
+            bill.setStatus("Opened - Pending Payment");
             bill.addLog(String.format("Final balance of $%.2f due from patient.", remainingBalance));
         }
 

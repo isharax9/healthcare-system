@@ -13,6 +13,7 @@ public class ReportPanel extends JPanel {
 
     public final JComboBox<String> reportTypeComboBox = new JComboBox<>();
     public final JButton generateReportButton = new JButton("Generate Report");
+    public final JButton printReportButton = new JButton("Print Report"); // <-- NEW BUTTON
 
     public final JTextArea reportArea = new JTextArea(25, 80);
 
@@ -40,6 +41,7 @@ public class ReportPanel extends JPanel {
         reportTypeComboBox.addItem("Financial Report");
         generationPanel.add(reportTypeComboBox);
         generationPanel.add(generateReportButton);
+        generationPanel.add(printReportButton); // <-- ADD THE NEW BUTTON HERE
         controlsPanel.add(generationPanel, BorderLayout.CENTER);
 
         add(controlsPanel, BorderLayout.NORTH);
@@ -56,5 +58,6 @@ public class ReportPanel extends JPanel {
         // Initial state
         reportTypeComboBox.setEnabled(false);
         generateReportButton.setEnabled(false);
+        printReportButton.setEnabled(false); // <-- NEW: Initially disabled
     }
 }

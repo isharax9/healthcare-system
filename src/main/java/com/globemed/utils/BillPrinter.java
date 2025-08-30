@@ -7,6 +7,7 @@ import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfWriter;
 import com.itextpdf.text.pdf.draw.LineSeparator;
 
+import java.io.File; // <-- NEW IMPORT
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -22,23 +23,36 @@ public class BillPrinter {
     private static final Font FONT_ITALIC = new Font(Font.FontFamily.HELVETICA, 10, Font.ITALIC);
 
     public static void printBill(MedicalBill bill, PatientRecord patient, List<InsurancePlan> allPlans) {
-        String fileName = "Bill-" + bill.getBillId() + "-" + patient.getPatientId() + ".pdf";
+        String folderName = "BillingReports"; // Define the specific folder name
+
+        // --- NEW: Create a folder if it doesn't exist ---
+        File folder = new File(folderName);
+        if (!folder.exists()) {
+            if (!folder.mkdirs()) { // Use mkdirs to create parent directories if they don't exist
+                System.err.println("Failed to create directory: " + folderName);
+                return; // Abort if the folder can't be created
+            }
+        }
+
+        // Combine folder path and file name
+        String fileNameOnly = String.format("Bill-%d-%s-%s.pdf", bill.getBillId(), patient.getPatientId(), LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")));
+        String fullPath = folder.getAbsolutePath() + File.separator + fileNameOnly; // Combine folder and file name
+
         Document document = new Document();
 
         try {
-            PdfWriter.getInstance(document, new FileOutputStream(fileName));
+            PdfWriter.getInstance(document, new FileOutputStream(fullPath)); // --- MODIFIED: Use fullPath ---
             document.open();
 
             addHeader(document, bill, patient);
 
-            // Pass the patient object to addFinancials to get their plan info
             addFinancials(document, bill, patient);
 
             addInsuranceLegend(document, patient.getInsurancePlan(), allPlans);
 
             addFooter(document);
 
-            System.out.println("PDF Bill generated: " + fileName);
+            System.out.println("PDF Bill generated: " + fullPath); // --- MODIFIED: Print full path ---
 
         } catch (DocumentException | IOException e) {
             System.err.println("Error generating PDF bill: " + e.getMessage());
@@ -51,17 +65,15 @@ public class BillPrinter {
     }
 
     private static void addHeader(Document document, MedicalBill bill, PatientRecord patient) throws DocumentException {
-        // ... (This method is unchanged)
         Paragraph title = new Paragraph("GlobeMed Healthcare - Official Bill", FONT_TITLE);
         title.setAlignment(Element.ALIGN_CENTER);
         document.add(title);
         document.add(Chunk.NEWLINE);
-        
-        // Add print date and time
+
         String printDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         addBoldNormalPair(document, "Printed on: ", printDateTime);
         document.add(Chunk.NEWLINE);
-        
+
         addBoldNormalPair(document, "Bill ID: ", String.valueOf(bill.getBillId()));
         addBoldNormalPair(document, "Patient ID: ", patient.getPatientId());
         addBoldNormalPair(document, "Patient Name: ", patient.getName());
@@ -70,28 +82,20 @@ public class BillPrinter {
         document.add(Chunk.NEWLINE);
     }
 
-    // --- THIS IS THE FULLY CORRECTED METHOD ---
     private static void addFinancials(Document document, MedicalBill bill, PatientRecord patient) throws DocumentException {
         document.add(new LineSeparator());
         document.add(new Paragraph(" "));
         addBoldNormalPair(document, "Original Amount: ", String.format("$%.2f", bill.getAmount()));
 
-        // Check if the patient has an insurance plan and display the calculation
         InsurancePlan plan = patient.getInsurancePlan();
         if (plan != null) {
-            // Calculate the discount amount
             double discount = bill.getAmount() - bill.getFinalAmount();
-
-            // Format the text for the discount line
             String insuranceLine = String.format("Insurance Discount (%s - %.0f%%):", plan.getPlanName(), plan.getCoveragePercent());
-
-            // Add the formatted line to the PDF
             addBoldNormalPair(document, insuranceLine, String.format("-$%.2f", discount));
         }
 
-        document.add(new Paragraph(" ")); // Spacer
+        document.add(new Paragraph(" "));
 
-        // Display the final amount
         Paragraph finalAmount = new Paragraph();
         finalAmount.add(new Chunk("Final Amount Due: ", FONT_FINAL_AMOUNT));
         finalAmount.add(new Chunk(String.format("$%.2f", bill.getFinalAmount()), FONT_FINAL_AMOUNT));
@@ -101,7 +105,6 @@ public class BillPrinter {
     }
 
     private static void addInsuranceLegend(Document document, InsurancePlan appliedPlan, List<InsurancePlan> allPlans) throws DocumentException {
-        // ... (This method is unchanged)
         document.add(new LineSeparator());
         document.add(new Paragraph(" "));
         document.add(new Paragraph("Insurance Plan Coverage Rates", FONT_HEADER_BOLD));
@@ -117,7 +120,6 @@ public class BillPrinter {
     }
 
     private static void addFooter(Document document) throws DocumentException {
-        // ... (This method is unchanged)
         document.add(Chunk.NEWLINE);
         Paragraph footer = new Paragraph("Thank you for choosing GlobeMed Healthcare.", FONT_ITALIC);
         footer.setAlignment(Element.ALIGN_CENTER);
@@ -125,7 +127,6 @@ public class BillPrinter {
     }
 
     private static void addBoldNormalPair(Document doc, String boldText, String normalText) throws DocumentException {
-        // ... (This method is unchanged)
         Phrase phrase = new Phrase();
         phrase.add(new Chunk(boldText, FONT_HEADER_BOLD));
         phrase.add(new Chunk(normalText, FONT_NORMAL));
