@@ -55,8 +55,10 @@ public class OutstandingPaymentsVisitor implements ReportVisitor {
     private void generateHeader() {
         reportContent.append(repeatString("=", 80)).append("\n");
         reportContent.append("    OUTSTANDING PAYMENTS REPORT\n");
-        reportContent.append(repeatString("=", 80)).append("\n");
-        reportContent.append("Generated: ").append(LocalDate.now().format(dateFormatter)).append("\n\n");
+        reportContent.append(repeatString("=", 90)).append("\n");
+        reportContent.append("Report Date: ").append(LocalDate.now().format(dateFormatter)).append("\n");
+        reportContent.append("System Version: v1.4\n");
+        reportContent.append(repeatString("=", 90)).append("\n\n");
     }
 
     private void generateSummary() {

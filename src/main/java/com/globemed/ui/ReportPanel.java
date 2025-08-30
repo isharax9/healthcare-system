@@ -65,6 +65,12 @@ public class ReportPanel extends JPanel {
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(spinner, "yyyy-MM-dd");
         spinner.setEditor(dateEditor);
         spinner.setPreferredSize(new Dimension(120, 25));
+
+        // Fade out the date spinners
+        spinner.setEnabled(false);
+        spinner.setBackground(new Color(245, 245, 245));
+        dateEditor.getTextField().setForeground(new Color(150, 150, 150));
+
         return spinner;
     }
 
@@ -73,11 +79,10 @@ public class ReportPanel extends JPanel {
         reportCategoryComboBox.addItem("Financial Reports");
         reportCategoryComboBox.addItem("Patient Reports");
 
-
         // Financial Report Types (default selection)
         updateReportTypes("Financial Reports");
 
-        // Period Quick Selectors
+        // Period Quick Selectors - Fade this dropdown
         periodComboBox.addItem("Custom Range");
         periodComboBox.addItem("Today");
         periodComboBox.addItem("Yesterday");
@@ -89,19 +94,55 @@ public class ReportPanel extends JPanel {
         periodComboBox.addItem("This Year");
         periodComboBox.addItem("Last Year");
 
+        // Apply faded styling to period combo box
+        fadeDropdown(periodComboBox);
+
         // Filter Dropdowns
         doctorFilterComboBox.addItem("All Doctors");
         serviceFilterComboBox.addItem("All Services");
-
         paymentStatusFilterComboBox.addItem("All Statuses");
         paymentStatusFilterComboBox.addItem("Paid");
         paymentStatusFilterComboBox.addItem("Partially Paid");
         paymentStatusFilterComboBox.addItem("Opened - Pending Payment");
 
+        // Apply faded styling to filter dropdowns
+        fadeDropdown(doctorFilterComboBox);
+        fadeDropdown(paymentStatusFilterComboBox);
+
         // Report Area
         reportArea.setFont(new Font("Monospaced", Font.PLAIN, 11));
         reportArea.setEditable(false);
         reportArea.setBackground(new Color(248, 248, 248));
+    }
+
+    /**
+     * Helper method to apply faded styling to dropdown components
+     */
+    private void fadeDropdown(JComboBox<String> comboBox) {
+        // Make the dropdown appear faded/disabled
+        comboBox.setEnabled(false);
+        comboBox.setBackground(new Color(245, 245, 245)); // Light gray background
+        comboBox.setForeground(new Color(120, 120, 120)); // Gray text
+
+        // Apply custom renderer for consistent faded appearance
+        comboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                          int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+                // Set faded colors
+                setForeground(new Color(120, 120, 120));
+                setBackground(new Color(245, 245, 245));
+
+                if (isSelected) {
+                    setBackground(new Color(230, 230, 230));
+                    setForeground(new Color(100, 100, 100));
+                }
+
+                return this;
+            }
+        });
     }
 
     private void layoutComponents() {
@@ -160,30 +201,52 @@ public class ReportPanel extends JPanel {
 
         mainConfigPanel.add(typePanel, BorderLayout.NORTH);
 
-        // --- Row 2: Date Range Selection ---
+        // --- Row 2: Date Range Selection (Faded) ---
         JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        datePanel.add(new JLabel("Period:"));
+
+        // Create faded labels for date section
+        JLabel periodLabel = new JLabel("Period:");
+        periodLabel.setForeground(new Color(150, 150, 150)); // Faded label
+        datePanel.add(periodLabel);
+
         periodComboBox.setPreferredSize(new Dimension(120, 25));
         datePanel.add(periodComboBox);
         datePanel.add(Box.createHorizontalStrut(10));
-        datePanel.add(new JLabel("From:"));
+
+        JLabel fromLabel = new JLabel("From:");
+        fromLabel.setForeground(new Color(150, 150, 150)); // Faded label
+        datePanel.add(fromLabel);
         datePanel.add(fromDateSpinner);
-        datePanel.add(new JLabel("To:"));
+
+        JLabel toLabel = new JLabel("To:");
+        toLabel.setForeground(new Color(150, 150, 150)); // Faded label
+        datePanel.add(toLabel);
         datePanel.add(toDateSpinner);
 
         mainConfigPanel.add(datePanel, BorderLayout.CENTER);
 
-        // --- Row 3: Filters ---
+        // --- Row 3: Filters (Some Faded) ---
         JPanel filtersPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        filtersPanel.add(new JLabel("Doctor:"));
+
+        // Faded Doctor filter
+        JLabel doctorLabel = new JLabel("Doctor:");
+        doctorLabel.setForeground(new Color(150, 150, 150)); // Faded label
+        filtersPanel.add(doctorLabel);
         doctorFilterComboBox.setPreferredSize(new Dimension(150, 25));
         filtersPanel.add(doctorFilterComboBox);
+
+        // Keep Service filter normal (not faded)
         filtersPanel.add(new JLabel("Service:"));
         serviceFilterComboBox.setPreferredSize(new Dimension(150, 25));
         filtersPanel.add(serviceFilterComboBox);
-        filtersPanel.add(new JLabel("Payment Status:"));
-        paymentStatusFilterComboBox.setPreferredSize(new Dimension(100, 25));
+
+        // Faded Payment Status filter
+        JLabel paymentLabel = new JLabel("Payment Status:");
+        paymentLabel.setForeground(new Color(150, 150, 150)); // Faded label
+        filtersPanel.add(paymentLabel);
+        paymentStatusFilterComboBox.setPreferredSize(new Dimension(150, 25)); // Increased width
         filtersPanel.add(paymentStatusFilterComboBox);
+
         filtersPanel.add(refreshFiltersButton);
 
         mainConfigPanel.add(filtersPanel, BorderLayout.SOUTH);
@@ -222,7 +285,6 @@ public class ReportPanel extends JPanel {
         exportExcelButton.setPreferredSize(new Dimension(110, 30));
 
         generateReportButton.setBackground(new Color(70, 130, 180));
-
         generateReportButton.setFont(generateReportButton.getFont().deriveFont(Font.BOLD));
 
         buttonsPanel.add(generateReportButton);
@@ -247,6 +309,9 @@ public class ReportPanel extends JPanel {
         // Set default selections
         reportCategoryComboBox.setSelectedItem("Financial Reports");
         periodComboBox.setSelectedItem("This Month");
+
+        // Update status with current timestamp and user
+        setReportStatus("Ready to generate reports - isharax9 - 2025-08-30 18:42:43 UTC");
     }
 
     // --- Public Methods for Dynamic Updates ---
@@ -272,7 +337,6 @@ public class ReportPanel extends JPanel {
                 reportTypeComboBox.addItem("Individual Patient Financial Summary");
                 reportTypeComboBox.addItem("Patient Payment History");
                 reportTypeComboBox.addItem("Patient's Service Utilization");
-
                 break;
         }
 
@@ -352,5 +416,53 @@ public class ReportPanel extends JPanel {
 
     public String getReportContent() {
         return reportArea.getText();
+    }
+
+    // --- Optional: Methods to enable/disable faded components when needed ---
+
+    /**
+     * Enable the faded dropdowns for specific report types that need them
+     */
+    public void enableDateFilters(boolean enabled) {
+        periodComboBox.setEnabled(enabled);
+        fromDateSpinner.setEnabled(enabled);
+        toDateSpinner.setEnabled(enabled);
+
+        if (enabled) {
+            // Restore normal appearance
+            periodComboBox.setBackground(Color.WHITE);
+            periodComboBox.setForeground(Color.BLACK);
+        } else {
+            // Apply faded appearance
+            fadeDropdown(periodComboBox);
+        }
+    }
+
+    /**
+     * Enable the doctor filter for specific report types that need it
+     */
+    public void enableDoctorFilter(boolean enabled) {
+        doctorFilterComboBox.setEnabled(enabled);
+
+        if (enabled) {
+            doctorFilterComboBox.setBackground(Color.WHITE);
+            doctorFilterComboBox.setForeground(Color.BLACK);
+        } else {
+            fadeDropdown(doctorFilterComboBox);
+        }
+    }
+
+    /**
+     * Enable the payment status filter for specific report types that need it
+     */
+    public void enablePaymentStatusFilter(boolean enabled) {
+        paymentStatusFilterComboBox.setEnabled(enabled);
+
+        if (enabled) {
+            paymentStatusFilterComboBox.setBackground(Color.WHITE);
+            paymentStatusFilterComboBox.setForeground(Color.BLACK);
+        } else {
+            fadeDropdown(paymentStatusFilterComboBox);
+        }
     }
 }
