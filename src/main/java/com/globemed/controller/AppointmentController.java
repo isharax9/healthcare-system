@@ -18,7 +18,8 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects; // Import for Objects.equals()
+import java.util.Objects;
+import java.util.stream.Collectors; // Import for filtering
 
 public class AppointmentController {
     private final AppointmentPanel view;
@@ -48,6 +49,7 @@ public class AppointmentController {
         view.updateAppointmentButton.addActionListener(e -> updateAppointment());
         view.viewAllAppointmentsButton.addActionListener(e -> showAllAppointments());
         view.markAsDoneSelectedButton.addActionListener(e -> markSelectedAppointmentAsDone());
+        view.updatePrescriptionButton.addActionListener(e -> updatePrescription()); // NEW: Update Prescription action
 
         // --- Doctor CRUD Actions ---
         view.addDoctorButton.addActionListener(e -> addDoctor());
@@ -59,27 +61,18 @@ public class AppointmentController {
         view.dateSpinner.addChangeListener(e -> {
             viewSchedule(); // Refresh schedule when date changes
         });
-        // Time spinner doesn't need a direct UI refresh listener as it's for booking input.
-
 
         // --- Table Selection Listeners ---
-        // Appointments table selection listener
+        // MODIFIED: Appointments table selection listener with smart button state logic
         view.appointmentsTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
                 if (!e.getValueIsAdjusting()) {
-                    populateAppointmentDetailsFields(); // Populate notes/reason when appointment selected
-                    boolean isSelected = view.appointmentsTable.getSelectedRow() != -1;
-                    view.updateAppointmentButton.setEnabled(isSelected && currentUser.hasPermission("can_update_appointment"));
-                    view.cancelAppointmentButton.setEnabled(isSelected && currentUser.hasPermission("can_delete_appointment"));
-                    view.markAsDoneSelectedButton.setEnabled(isSelected && currentUser.hasPermission("can_mark_appointment_done"));
+                    // Only load doctor notes for selected appointment (not patient ID, reason, time)
+                    loadDoctorNotesOnly();
 
-                    // Enable notes editing based on selection and if current user is the doctor for that appointment and has permission
-                    Appointment selectedAppt = view.getSelectedAppointment(currentAppointments);
-                    boolean canEditNotes = isSelected && selectedAppt != null && currentUser.getDoctorId() != null &&
-                            currentUser.getDoctorId().equals(selectedAppt.getDoctorId()) &&
-                            currentUser.hasPermission("can_add_appointment_notes");
-                    view.setDoctorNotesEditable(canEditNotes);
+                    // MODIFIED: Smart button state logic based on appointment status
+                    updateButtonStatesBasedOnSelection();
                 }
             }
         });
@@ -100,6 +93,139 @@ public class AppointmentController {
         });
     }
 
+    // MODIFIED: Smart button state logic based on appointment selection and status
+    private void updateButtonStatesBasedOnSelection() {
+        boolean isSelected = view.appointmentsTable.getSelectedRow() != -1;
+        Appointment selectedAppt = view.getSelectedAppointment(currentAppointments);
+
+        if (!isSelected || selectedAppt == null) {
+            // No appointment selected - disable all buttons
+            view.updateAppointmentButton.setEnabled(false);
+            view.cancelAppointmentButton.setEnabled(false);
+            view.markAsDoneSelectedButton.setEnabled(false);
+            view.updatePrescriptionButton.setEnabled(false);
+            view.setDoctorNotesEditable(false);
+            return;
+        }
+
+        String status = selectedAppt.getStatus();
+        boolean isOwner = currentUser.getDoctorId() != null && currentUser.getDoctorId().equals(selectedAppt.getDoctorId());
+        boolean isDoctor = currentUser.getDoctorId() != null;
+        boolean isNurse = !isDoctor; // Non-doctors are nurses/admins
+
+        System.out.println("DEBUG - updateButtonStatesBasedOnSelection:"); // DEBUG
+        System.out.println("  Selected appointment status: " + status); // DEBUG
+        System.out.println("  User is owner: " + isOwner); // DEBUG
+        System.out.println("  User is doctor: " + isDoctor); // DEBUG
+        System.out.println("  User is nurse/admin: " + isNurse); // DEBUG
+        System.out.println("  User doctorId: " + currentUser.getDoctorId()); // DEBUG
+        System.out.println("  Appointment doctorId: " + selectedAppt.getDoctorId()); // DEBUG
+
+        // MODIFIED: Update Appointment Reason - ONLY nurses can update, ONLY if status is "Scheduled"
+        boolean canUpdateReason = currentUser.hasPermission("can_update_appointment") &&
+                isNurse && // Only nurses (not doctors)
+                "Scheduled".equalsIgnoreCase(status); // Only if status is "Scheduled"
+        view.updateAppointmentButton.setEnabled(canUpdateReason);
+
+        // Cancel Appointment - NOT available for "Done" appointments, available for others
+        boolean canCancel = currentUser.hasPermission("can_cancel_appointment") &&
+                !"Done".equalsIgnoreCase(status) &&
+                !"Canceled".equalsIgnoreCase(status) &&
+                (isOwner || isNurse); // Doctors can cancel own, nurses can cancel any
+        view.cancelAppointmentButton.setEnabled(canCancel);
+
+        // Mark as Done - NOT available for "Canceled" appointments, available for others
+        boolean canMarkDone = currentUser.hasPermission("can_mark_appointment_done") &&
+                !"Canceled".equalsIgnoreCase(status) &&
+                !"Done".equalsIgnoreCase(status) &&
+                (isOwner || isNurse); // Doctors can mark own, nurses can mark any
+        view.markAsDoneSelectedButton.setEnabled(canMarkDone);
+
+        // Update Prescription - only for doctors who own the appointment and have permission
+        boolean canUpdatePrescription = currentUser.hasPermission("can_add_appointment_notes") &&
+                isOwner && // Must be the doctor who owns the appointment
+                isDoctor && // Must be a doctor
+                !"Canceled".equalsIgnoreCase(status); // Can't update prescription for canceled appointments
+        view.updatePrescriptionButton.setEnabled(canUpdatePrescription);
+
+        // Enable notes editing based on selection and permissions
+        boolean canEditNotes = isOwner && currentUser.hasPermission("can_add_appointment_notes");
+        view.setDoctorNotesEditable(canEditNotes);
+
+        System.out.println("  canUpdateReason: " + canUpdateReason); // DEBUG
+        System.out.println("  canCancel: " + canCancel); // DEBUG
+        System.out.println("  canMarkDone: " + canMarkDone); // DEBUG
+        System.out.println("  canUpdatePrescription: " + canUpdatePrescription); // DEBUG
+    }
+
+    // NEW: Update Prescription functionality
+    private void updatePrescription() {
+        if (!currentUser.hasPermission("can_add_appointment_notes")) {
+            JOptionPane.showMessageDialog(mainFrame, "You do not have permission to update prescriptions.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        Appointment selectedAppointment = view.getSelectedAppointment(currentAppointments);
+        if (selectedAppointment == null) {
+            JOptionPane.showMessageDialog(view, "Please select an appointment to update prescription.", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Only doctors can update their own appointment prescriptions
+        if (!currentUser.getDoctorId().equals(selectedAppointment.getDoctorId())) {
+            JOptionPane.showMessageDialog(mainFrame, "You can only update prescriptions for your own appointments.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Check if appointment is canceled
+        if ("Canceled".equalsIgnoreCase(selectedAppointment.getStatus())) {
+            JOptionPane.showMessageDialog(view, "Cannot update prescription for canceled appointments.", "Invalid Status", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Get current prescription/notes from the text area
+        String currentNotes = view.getDoctorNotesText();
+
+        // Show input dialog with current notes
+        JTextArea textArea = new JTextArea(8, 40);
+        textArea.setText(currentNotes);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        JScrollPane scrollPane = new JScrollPane(textArea);
+
+        int result = JOptionPane.showConfirmDialog(view, scrollPane,
+                "Update Prescription/Notes for Patient " + selectedAppointment.getPatientId(),
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            String newNotes = textArea.getText().trim();
+
+            // Update the appointment with new notes
+            selectedAppointment.setDoctorNotes(newNotes);
+            boolean success = dao.updateAppointment(selectedAppointment);
+
+            if (success) {
+                // Update the UI
+                view.setDoctorNotesText(newNotes);
+                JOptionPane.showMessageDialog(view, "Prescription/Notes updated successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(view, "Failed to update prescription/notes.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    // Method to load only doctor notes when appointment is selected (no auto-filling)
+    private void loadDoctorNotesOnly() {
+        Appointment selectedAppointment = view.getSelectedAppointment(currentAppointments);
+        if (selectedAppointment != null) {
+            // Only load doctor notes, don't fill other fields
+            view.setDoctorNotesText(selectedAppointment.getDoctorNotes());
+        } else {
+            // Clear only doctor notes
+            view.setDoctorNotesText("");
+        }
+    }
+
     private void loadInitialData() {
         refreshDoctorList(); // Load doctors initially
         view.setAppointmentsList(List.of()); // Clear appointments on startup
@@ -114,14 +240,14 @@ public class AppointmentController {
         view.doctorsTable.clearSelection(); // Clear doctor table selection as well
         applyPermissions(); // Re-apply permissions after refresh
 
-        // --- NEW: Automatically select a logged-in doctor if applicable ---
+        // --- Automatically select a logged-in doctor if applicable ---
         if (currentUser.getDoctorId() != null) {
             selectDoctorRow(currentUser.getDoctorId());
             viewSchedule(); // Automatically show their schedule
         }
     }
 
-    // --- NEW HELPER: Selects and highlights a doctor's row in the table ---
+    // --- Helper: Selects and highlights a doctor's row in the table ---
     private void selectDoctorRow(String doctorId) {
         for (int i = 0; i < currentDoctors.size(); i++) {
             if (Objects.equals(currentDoctors.get(i).getDoctorId(), doctorId)) {
@@ -131,32 +257,25 @@ public class AppointmentController {
         }
     }
 
-
     private void applyPermissions() {
         // --- Appointment related permissions ---
-        // 'View Selected Day Appointments' button is enabled for logged-in doctors (to see their own), or for Admins/Nurses (if a doctor is selected)
         view.viewScheduleButton.setEnabled(currentUser.getDoctorId() != null || (view.doctorsTable.getSelectedRow() != -1 && currentUser.hasPermission("can_access_appointments")));
-
-        // 'View All Appointments' is enabled for anyone with 'can_access_appointments' permission
         view.viewAllAppointmentsButton.setEnabled(currentUser.hasPermission("can_access_appointments"));
-
         view.bookAppointmentButton.setEnabled(currentUser.hasPermission("can_book_appointment"));
 
         // These are managed by selection listener for the appointments table
         view.updateAppointmentButton.setEnabled(false);
         view.cancelAppointmentButton.setEnabled(false);
         view.markAsDoneSelectedButton.setEnabled(false);
-        view.setDoctorNotesEditable(false); // Editable only when an appointment is selected and doctor has permission
+        view.updatePrescriptionButton.setEnabled(false); // NEW: Initially disabled
+        view.setDoctorNotesEditable(false);
 
         // Doctor CRUD Permissions (Admin Only)
         boolean canManageDoctors = currentUser.hasPermission("can_manage_doctors");
         view.setDoctorCrudFieldsEditable(canManageDoctors);
         view.addDoctorButton.setEnabled(canManageDoctors);
-
-        // Update/Delete buttons depend on both admin permission AND a selected doctor
         view.updateDoctorButton.setEnabled(canManageDoctors && view.doctorsTable.getSelectedRow() != -1);
         view.deleteDoctorButton.setEnabled(canManageDoctors && view.doctorsTable.getSelectedRow() != -1);
-
         view.clearDoctorFieldsButton.setEnabled(canManageDoctors);
     }
 
@@ -167,13 +286,12 @@ public class AppointmentController {
             view.newDoctorIdField.setText(selectedDoctor.getDoctorId());
             view.newDoctorNameField.setText(selectedDoctor.getFullName());
             view.newDoctorSpecialtyField.setText(selectedDoctor.getSpecialty());
-            view.newDoctorIdField.setEditable(false); // ID is not editable once a doctor is selected for update/delete
-            applyPermissions(); // Re-apply to enable/disable update/delete buttons correctly
+            view.newDoctorIdField.setEditable(false);
+            applyPermissions();
         } else {
-            // If selection is cleared, prepare for new doctor entry
             clearDoctorCrudFields();
-            view.newDoctorIdField.setEditable(true); // ID becomes editable for new entries
-            applyPermissions(); // Re-apply to enable Add/disable Update/Delete
+            view.newDoctorIdField.setEditable(true);
+            applyPermissions();
         }
     }
 
@@ -198,7 +316,7 @@ public class AppointmentController {
 
         if (success) {
             JOptionPane.showMessageDialog(view, "Doctor added successfully!");
-            refreshDoctorList(); // Refresh the JList of doctors
+            refreshDoctorList();
         } else {
             JOptionPane.showMessageDialog(view, "Failed to add doctor. ID might already exist.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -229,7 +347,7 @@ public class AppointmentController {
 
         if (success) {
             JOptionPane.showMessageDialog(view, "Doctor updated successfully!");
-            refreshDoctorList(); // Refresh the JList of doctors
+            refreshDoctorList();
         } else {
             JOptionPane.showMessageDialog(view, "Failed to update doctor.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -270,86 +388,62 @@ public class AppointmentController {
         applyPermissions();
     }
 
-    // --- Appointment Details Population ---
-    private void populateAppointmentDetailsFields() {
-        Appointment selectedAppointment = view.getSelectedAppointment(currentAppointments);
-        if (selectedAppointment != null) {
-            view.patientIdField.setText(selectedAppointment.getPatientId());
-            view.reasonField.setText(selectedAppointment.getReason());
-            view.timeSpinner.setValue(
-                    Date.from(selectedAppointment.getAppointmentDateTime().atZone(ZoneId.systemDefault()).toInstant()));
-            view.setDoctorNotesText(selectedAppointment.getDoctorNotes());
-
-            boolean canEditNotes = currentUser.getDoctorId() != null &&
-                    currentUser.getDoctorId().equals(selectedAppointment.getDoctorId()) &&
-                    currentUser.hasPermission("can_add_appointment_notes");
-            view.setDoctorNotesEditable(canEditNotes);
-
-        } else {
-            view.clearAppointmentDetailsFields();
-        }
-    }
-
-
     // --- Appointment Viewing and Booking Methods ---
     private void showAllAppointments() {
         String doctorIdToView = null;
         String infoMessage = "";
 
-        if (currentUser.getDoctorId() != null) { // Logged in as a doctor
-            // --- NEW: Doctors viewing "All Appointments" should only see their own ---
+        if (currentUser.getDoctorId() != null) {
             doctorIdToView = currentUser.getDoctorId();
             infoMessage = "Displaying all your appointments.";
             view.doctorsTable.clearSelection();
-            selectDoctorRow(doctorIdToView); // Select logged-in doctor's row
-        } else { // Not a doctor (Admin or Nurse)
+            selectDoctorRow(doctorIdToView);
+        } else {
             infoMessage = "Displaying all appointments.";
             view.doctorsTable.clearSelection();
         }
 
         List<Appointment> appointments;
         if (doctorIdToView != null) {
-            // Fetch all appointments for this specific doctor
             appointments = dao.getAppointmentsByDoctorId(doctorIdToView);
+            // MODIFIED: Filter out "Canceled" appointments for doctors
+            appointments = appointments.stream()
+                    .filter(apt -> !"Canceled".equalsIgnoreCase(apt.getStatus()))
+                    .collect(Collectors.toList());
         } else {
-            // Fetch all appointments (for Admin/Nurse)
             appointments = dao.getAllAppointments();
+            // For nurses/admins, show all appointments including canceled ones
         }
 
         if (appointments.isEmpty()) {
             JOptionPane.showMessageDialog(mainFrame, "No appointments found.", "Information", JOptionPane.INFORMATION_MESSAGE);
-            // This will ensure "No appointments found." message is displayed in the table
             view.setAppointmentsList(List.of());
             return;
         }
 
         AllAppointmentsDialog dialog = new AllAppointmentsDialog(
                 mainFrame,
-                appointments, // Pass the (potentially filtered) list
+                appointments,
                 currentUser.hasPermission("can_mark_appointment_done")
         );
         dialog.setVisible(true);
     }
 
-
     private void viewSchedule() {
         String doctorIdToView = null;
         Doctor selectedDoctor = view.getSelectedDoctor(currentDoctors);
 
-        // --- NEW/MODIFIED: Enforce "My Appointments Only" for Doctors ---
-        if (currentUser.getDoctorId() != null) { // Logged-in user is a doctor
+        if (currentUser.getDoctorId() != null) {
             if (selectedDoctor != null && !currentUser.getDoctorId().equals(selectedDoctor.getDoctorId())) {
-                // Doctor tried to select another doctor
                 JOptionPane.showMessageDialog(mainFrame, "You can't view other doctors' appointments. Please contact a Nurse or Admin.", "Access Denied", JOptionPane.ERROR_MESSAGE);
-                view.doctorsTable.clearSelection(); // Clear their invalid selection
-                view.setAppointmentsList(List.of()); // Clear appointments list and show "No records"
-                view.clearAppointmentDetailsFields(); // Clear notes etc.
+                view.doctorsTable.clearSelection();
+                view.setAppointmentsList(List.of());
+                view.clearAppointmentDetailsFields();
                 return;
             }
-            // If no doctor is selected (implicitly viewing self) or their own doctor is selected, proceed with their ID
             doctorIdToView = currentUser.getDoctorId();
-            selectDoctorRow(doctorIdToView); // Highlight the doctor's row
-        } else { // Not a doctor (Admin or Nurse), can view any selected doctor's schedule
+            selectDoctorRow(doctorIdToView);
+        } else {
             if (selectedDoctor == null) {
                 JOptionPane.showMessageDialog(view, "Please select a doctor first.", "Warning", JOptionPane.WARNING_MESSAGE);
                 return;
@@ -361,9 +455,19 @@ public class AppointmentController {
         LocalDate localDate = selectedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 
         currentAppointments = dao.getAppointmentsForDoctorOnDate(doctorIdToView, localDate);
-        // --- NEW: If no records are found, ensure the clear message is set ---
+
+        // MODIFIED: Filter out "Canceled" appointments for doctors only
+        if (currentUser.getDoctorId() != null) {
+            currentAppointments = currentAppointments.stream()
+                    .filter(apt -> !"Canceled".equalsIgnoreCase(apt.getStatus()))
+                    .collect(Collectors.toList());
+            System.out.println("DEBUG - Filtering canceled appointments for doctor. Remaining: " + currentAppointments.size()); // DEBUG
+        } else {
+            System.out.println("DEBUG - Not filtering appointments for non-doctor user. Total: " + currentAppointments.size()); // DEBUG
+        }
+
         if (currentAppointments.isEmpty()) {
-            view.setAppointmentsList(List.of()); // Call to show "No appointments found."
+            view.setAppointmentsList(List.of());
         } else {
             view.setAppointmentsList(currentAppointments);
         }
@@ -376,7 +480,7 @@ public class AppointmentController {
         }
 
         Doctor selectedDoctor = null;
-        if (currentUser.getDoctorId() != null) { // Logged-in user is a doctor, auto-assign this doctor
+        if (currentUser.getDoctorId() != null) {
             for (Doctor doc : currentDoctors) {
                 if (doc.getDoctorId().equals(currentUser.getDoctorId())) {
                     selectedDoctor = doc;
@@ -387,8 +491,8 @@ public class AppointmentController {
                 JOptionPane.showMessageDialog(mainFrame, "Your staff account's doctor ID is not linked to an active doctor profile. Please contact admin.", "Configuration Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            selectDoctorRow(currentUser.getDoctorId()); // Auto-select doctor's row in the table
-        } else { // Not a doctor, must select a doctor from the table
+            selectDoctorRow(currentUser.getDoctorId());
+        } else {
             selectedDoctor = view.getSelectedDoctor(currentDoctors);
             if (selectedDoctor == null) {
                 JOptionPane.showMessageDialog(view, "Please select a doctor first.", "Validation Error", JOptionPane.ERROR_MESSAGE);
@@ -398,7 +502,7 @@ public class AppointmentController {
 
         String patientId = view.patientIdField.getText().trim();
         String reason = view.reasonField.getText().trim();
-        String doctorNotes = view.getDoctorNotesText(); // Get initial notes from the form
+        String doctorNotes = view.getDoctorNotesText();
 
         if (patientId.isEmpty()) {
             JOptionPane.showMessageDialog(view, "Please enter a Patient ID.", "Validation Error", JOptionPane.ERROR_MESSAGE);
@@ -413,12 +517,13 @@ public class AppointmentController {
 
         String resultMessage = scheduler.bookAppointment(patientId, selectedDoctor, requestedDateTime, reason, doctorNotes);
         JOptionPane.showMessageDialog(view, resultMessage, "Booking Status", JOptionPane.INFORMATION_MESSAGE);
-        viewSchedule(); // Refresh view
-        view.clearAppointmentDetailsFields(); // Clear fields after successful booking
+        viewSchedule();
+        view.clearBookingFormFields();
     }
 
+    // Cancel appointment functionality - now updates status to "Canceled" instead of deleting
     private void cancelAppointment() {
-        if (!currentUser.hasPermission("can_delete_appointment")) {
+        if (!currentUser.hasPermission("can_cancel_appointment")) {
             JOptionPane.showMessageDialog(mainFrame, "You do not have permission to cancel appointments.", "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -429,24 +534,43 @@ public class AppointmentController {
             return;
         }
 
+        // MODIFIED: Check if appointment is already canceled or done
+        if ("Canceled".equalsIgnoreCase(selectedAppointment.getStatus())) {
+            JOptionPane.showMessageDialog(view, "This appointment is already canceled.", "Information", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        if ("Done".equalsIgnoreCase(selectedAppointment.getStatus())) {
+            JOptionPane.showMessageDialog(view, "Cannot cancel a completed appointment.", "Invalid Status", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // If user is a doctor, they can only cancel their own appointments
         if (currentUser.getDoctorId() != null && !currentUser.getDoctorId().equals(selectedAppointment.getDoctorId())) {
             JOptionPane.showMessageDialog(mainFrame, "You can only cancel your own appointments.", "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         int choice = JOptionPane.showConfirmDialog(view,
-                "Are you sure you want to cancel this appointment?",
-                "Confirm Cancellation", JOptionPane.YES_NO_OPTION);
+                "Are you sure you want to cancel appointment #" + selectedAppointment.getAppointmentId() +
+                        " for Patient " + selectedAppointment.getPatientId() + "?\n" +
+                        "This will change the status to 'Canceled'.",
+                "Confirm Cancellation", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
         if (choice == JOptionPane.YES_OPTION) {
-            boolean success = dao.deleteAppointment(selectedAppointment.getAppointmentId());
+            // Update status to "Canceled" instead of deleting
+            selectedAppointment.setStatus("Canceled");
+            boolean success = dao.updateAppointment(selectedAppointment);
+
             if (success) {
-                JOptionPane.showMessageDialog(view, "Appointment canceled successfully.");
+                JOptionPane.showMessageDialog(view, "Appointment canceled successfully. Status updated to 'Canceled'.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                viewSchedule(); // Refresh the appointments view
+                view.clearAppointmentDetailsFields();
             } else {
                 JOptionPane.showMessageDialog(view, "Failed to cancel appointment.", "Error", JOptionPane.ERROR_MESSAGE);
+                // Revert status change if update failed
+                selectedAppointment.setStatus("Scheduled");
             }
-            viewSchedule();
-            view.clearAppointmentDetailsFields();
         }
     }
 
@@ -467,9 +591,14 @@ public class AppointmentController {
             return;
         }
 
-
+        // MODIFIED: Check if appointment is already done or canceled
         if ("Done".equalsIgnoreCase(selectedAppointment.getStatus())) {
             JOptionPane.showMessageDialog(view, "Appointment is already marked as Done.", "Information", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        if ("Canceled".equalsIgnoreCase(selectedAppointment.getStatus())) {
+            JOptionPane.showMessageDialog(view, "Cannot mark a canceled appointment as done.", "Invalid Status", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -479,7 +608,7 @@ public class AppointmentController {
 
         if (confirm == JOptionPane.YES_OPTION) {
             selectedAppointment.setStatus("Done");
-            selectedAppointment.setDoctorNotes(view.getDoctorNotesText()); // Save notes from the area
+            selectedAppointment.setDoctorNotes(view.getDoctorNotesText());
             boolean success = dao.updateAppointment(selectedAppointment);
 
             if (success) {
@@ -488,7 +617,7 @@ public class AppointmentController {
                 view.clearAppointmentDetailsFields();
             } else {
                 JOptionPane.showMessageDialog(view, "Failed to update appointment status.", "Error", JOptionPane.ERROR_MESSAGE);
-                selectedAppointment.setStatus("Scheduled"); // Revert status in memory if DB update fails
+                selectedAppointment.setStatus("Scheduled");
             }
         }
     }
@@ -513,8 +642,8 @@ public class AppointmentController {
         String newReason = JOptionPane.showInputDialog(view, "Enter new reason for appointment:", selectedAppointment.getReason());
 
         if (newReason != null && !newReason.trim().isEmpty()) {
-            selectedAppointment.setReason(newReason.trim()); // Update existing object
-            selectedAppointment.setDoctorNotes(view.getDoctorNotesText()); // Save notes with update
+            selectedAppointment.setReason(newReason.trim());
+            selectedAppointment.setDoctorNotes(view.getDoctorNotesText());
 
             boolean success = dao.updateAppointment(selectedAppointment);
             if (success) {

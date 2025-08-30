@@ -20,7 +20,7 @@ public class AppointmentPanel extends JPanel {
     public final JTable doctorsTable = new JTable();
     public final DefaultTableModel doctorTableModel = new DefaultTableModel();
     public final JSpinner dateSpinner; // Initialized in constructor
-    public final JButton viewScheduleButton = new JButton("View Selected Day Appointments"); // <-- MODIFIED TEXT
+    public final JButton viewScheduleButton = new JButton("View Selected Day Appointments");
     public final JButton viewAllAppointmentsButton = new JButton("View All Appointments");
     public final JTable appointmentsTable = new JTable();
     public final DefaultTableModel appointmentsTableModel = new DefaultTableModel();
@@ -28,9 +28,9 @@ public class AppointmentPanel extends JPanel {
     public final JSpinner timeSpinner; // Initialized in constructor
     public final JTextField reasonField = new JTextField(20);
     public final JButton bookAppointmentButton = new JButton("Book Appointment");
-    public final JButton updateAppointmentButton = new JButton("Update Selected");
-    public final JButton cancelAppointmentButton = new JButton("Cancel Selected");
-    public final JButton markAsDoneSelectedButton = new JButton("Mark Selected as Done");
+    public final JButton updateAppointmentButton = new JButton("Update Appointment Reason");
+    public final JButton cancelAppointmentButton = new JButton("Cancel Appointment");
+    public final JButton markAsDoneSelectedButton = new JButton("Mark as Done");
 
     // --- Doctor CRUD Components ---
     public final JTextField newDoctorIdField = new JTextField(10);
@@ -44,7 +44,7 @@ public class AppointmentPanel extends JPanel {
     // --- Doctor Notes Components ---
     public final JTextArea doctorNotesArea = new JTextArea(5, 40);
     public final JScrollPane doctorNotesScrollPane;
-
+    public final JButton updatePrescriptionButton = new JButton("Update Prescription"); // NEW: Update Prescription button
 
     public AppointmentPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -52,18 +52,17 @@ public class AppointmentPanel extends JPanel {
 
         initializeTableModels(); // Initialize table models
 
-        // --- NEW: Configure Date Spinner for DAY_OF_YEAR increment ---
+        // --- Configure Date Spinner for DAY_OF_YEAR increment ---
         SpinnerDateModel dateModel = new SpinnerDateModel(new Date(), null, null, Calendar.DAY_OF_YEAR);
-        dateSpinner = new JSpinner(dateModel); // Assign to final field
+        dateSpinner = new JSpinner(dateModel);
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd");
         dateSpinner.setEditor(dateEditor);
 
-        // --- NEW: Configure Time Spinner for MINUTE increment ---
+        // --- Configure Time Spinner for MINUTE increment ---
         SpinnerDateModel timeModel = new SpinnerDateModel(new Date(), null, null, Calendar.MINUTE);
-        timeSpinner = new JSpinner(timeModel); // Assign to final field
+        timeSpinner = new JSpinner(timeModel);
         JSpinner.DateEditor timeEditor = new JSpinner.DateEditor(timeSpinner, "HH:mm");
         timeSpinner.setEditor(timeEditor);
-
 
         doctorNotesScrollPane = new JScrollPane(doctorNotesArea);
 
@@ -126,7 +125,6 @@ public class AppointmentPanel extends JPanel {
         dateAndActionPanel.setBorder(new TitledBorder("2. Schedule Actions"));
         JPanel dateSelectionSubPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         dateSelectionSubPanel.add(new JLabel("Date:"));
-        // dateSpinner setup is now handled at the top
         dateSelectionSubPanel.add(dateSpinner);
         dateSelectionSubPanel.add(viewScheduleButton);
         dateAndActionPanel.add(dateSelectionSubPanel);
@@ -142,7 +140,7 @@ public class AppointmentPanel extends JPanel {
         appointmentsTable.setRowSelectionAllowed(true);
         appointmentsTable.setColumnSelectionAllowed(false);
         appointmentsTable.getTableHeader().setReorderingAllowed(false);
-        appointmentsTable.setDefaultRenderer(LocalDateTime.class, new LocalDateTimeRenderer()); // Set custom renderer
+        appointmentsTable.setDefaultRenderer(LocalDateTime.class, new LocalDateTimeRenderer());
 
         appointmentsTable.getColumnModel().getColumn(0).setPreferredWidth(50);
         appointmentsTable.getColumnModel().getColumn(1).setPreferredWidth(120);
@@ -162,12 +160,18 @@ public class AppointmentPanel extends JPanel {
         scheduleActions.add(cancelAppointmentButton);
         bottomSchedulePanel.add(scheduleActions, BorderLayout.NORTH);
 
-        // Doctor Notes / Prescription area
+        // MODIFIED: Doctor Notes / Prescription area with Update Prescription button
         JPanel doctorNotesPanel = new JPanel(new BorderLayout());
-        doctorNotesPanel.setBorder(new TitledBorder("Doctor Notes / Prescription (Doctors Only)")); // <-- MODIFIED LABEL TEXT
+        doctorNotesPanel.setBorder(new TitledBorder("Doctor Notes / Prescription (Doctors Only)"));
         doctorNotesArea.setLineWrap(true);
         doctorNotesArea.setWrapStyleWord(true);
         doctorNotesPanel.add(doctorNotesScrollPane, BorderLayout.CENTER);
+
+        // NEW: Add Update Prescription button to the right side of the doctor notes panel
+        JPanel prescriptionButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        prescriptionButtonPanel.add(updatePrescriptionButton);
+        doctorNotesPanel.add(prescriptionButtonPanel, BorderLayout.SOUTH);
+
         bottomSchedulePanel.add(doctorNotesPanel, BorderLayout.CENTER);
 
         schedulePanel.add(bottomSchedulePanel, BorderLayout.SOUTH);
@@ -180,7 +184,6 @@ public class AppointmentPanel extends JPanel {
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.anchor = GridBagConstraints.WEST;
 
-        // timeSpinner setup is now handled at the top
         gbc.gridx = 0; gbc.gridy = 0; bookingPanel.add(new JLabel("Patient ID:"), gbc);
         gbc.gridx = 1; gbc.gridy = 0; bookingPanel.add(patientIdField, gbc);
         gbc.gridx = 0; gbc.gridy = 1; bookingPanel.add(new JLabel("Time (HH:mm):"), gbc);
@@ -202,6 +205,7 @@ public class AppointmentPanel extends JPanel {
         cancelAppointmentButton.setEnabled(false);
         viewAllAppointmentsButton.setEnabled(false);
         markAsDoneSelectedButton.setEnabled(false);
+        updatePrescriptionButton.setEnabled(false); // NEW: Initially disabled
         doctorNotesArea.setEditable(false);
         clearAppointmentDetailsFields();
     }
@@ -229,6 +233,14 @@ public class AppointmentPanel extends JPanel {
         doctorNotesArea.setText("");
     }
 
+    // Method to clear ONLY the booking form fields (not doctor notes)
+    public void clearBookingFormFields() {
+        patientIdField.setText("");
+        reasonField.setText("");
+        // Reset time spinner to current time
+        timeSpinner.setValue(new Date());
+    }
+
     public void setDoctorList(List<Doctor> doctors) {
         doctorTableModel.setRowCount(0);
         for (Doctor doctor : doctors) {
@@ -240,7 +252,6 @@ public class AppointmentPanel extends JPanel {
         }
     }
 
-    // --- MODIFIED: Method to set appointments list, now handles "No records" ---
     public void setAppointmentsList(List<Appointment> appointments) {
         appointmentsTableModel.setRowCount(0); // Clear existing data
 
@@ -248,11 +259,10 @@ public class AppointmentPanel extends JPanel {
             appointmentsTableModel.addRow(new Object[]{"", "", "", "", "No appointments found.", ""});
             appointmentsTable.setEnabled(false);
         } else {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"); // This line is not used here but kept for context.
             for (Appointment appointment : appointments) {
                 appointmentsTableModel.addRow(new Object[]{
                         appointment.getAppointmentId(),
-                        appointment.getAppointmentDateTime(), // Pass LocalDateTime object directly
+                        appointment.getAppointmentDateTime(),
                         appointment.getPatientId(),
                         appointment.getDoctorId(),
                         appointment.getReason(),
@@ -261,7 +271,7 @@ public class AppointmentPanel extends JPanel {
             }
             appointmentsTable.setEnabled(true);
         }
-        appointmentsTable.repaint(); // Important to repaint after model change
+        appointmentsTable.repaint();
     }
 
     public Doctor getSelectedDoctor(List<Doctor> doctors) {
@@ -318,7 +328,7 @@ public class AppointmentPanel extends JPanel {
         doctorNotesArea.setBackground(editable ? Color.WHITE : UIManager.getColor("Panel.background"));
     }
 
-    // --- Custom Renderer for LocalDateTime in JTable ---
+    // Custom Renderer for LocalDateTime in JTable
     private static class LocalDateTimeRenderer extends DefaultTableCellRenderer {
         private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
