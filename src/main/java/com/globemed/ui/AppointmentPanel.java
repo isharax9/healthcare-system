@@ -44,6 +44,7 @@ public class AppointmentPanel extends JPanel {
     // --- Doctor Notes Components ---
     public final JTextArea doctorNotesArea = new JTextArea(5, 40);
     public final JScrollPane doctorNotesScrollPane;
+    public final JButton updatePrescriptionButton = new JButton("Update Prescription"); // NEW: Update Prescription button
 
     public AppointmentPanel() {
         setLayout(new BorderLayout(10, 10));
@@ -159,12 +160,18 @@ public class AppointmentPanel extends JPanel {
         scheduleActions.add(cancelAppointmentButton);
         bottomSchedulePanel.add(scheduleActions, BorderLayout.NORTH);
 
-        // Doctor Notes / Prescription area
+        // MODIFIED: Doctor Notes / Prescription area with Update Prescription button
         JPanel doctorNotesPanel = new JPanel(new BorderLayout());
         doctorNotesPanel.setBorder(new TitledBorder("Doctor Notes / Prescription (Doctors Only)"));
         doctorNotesArea.setLineWrap(true);
         doctorNotesArea.setWrapStyleWord(true);
         doctorNotesPanel.add(doctorNotesScrollPane, BorderLayout.CENTER);
+
+        // NEW: Add Update Prescription button to the right side of the doctor notes panel
+        JPanel prescriptionButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        prescriptionButtonPanel.add(updatePrescriptionButton);
+        doctorNotesPanel.add(prescriptionButtonPanel, BorderLayout.SOUTH);
+
         bottomSchedulePanel.add(doctorNotesPanel, BorderLayout.CENTER);
 
         schedulePanel.add(bottomSchedulePanel, BorderLayout.SOUTH);
@@ -198,6 +205,7 @@ public class AppointmentPanel extends JPanel {
         cancelAppointmentButton.setEnabled(false);
         viewAllAppointmentsButton.setEnabled(false);
         markAsDoneSelectedButton.setEnabled(false);
+        updatePrescriptionButton.setEnabled(false); // NEW: Initially disabled
         doctorNotesArea.setEditable(false);
         clearAppointmentDetailsFields();
     }
@@ -225,7 +233,7 @@ public class AppointmentPanel extends JPanel {
         doctorNotesArea.setText("");
     }
 
-    // NEW: Method to clear ONLY the booking form fields (not doctor notes)
+    // Method to clear ONLY the booking form fields (not doctor notes)
     public void clearBookingFormFields() {
         patientIdField.setText("");
         reasonField.setText("");
