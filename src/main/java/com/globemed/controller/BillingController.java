@@ -17,10 +17,8 @@ import com.globemed.utils.BillPrinter;
 import com.globemed.auth.IUser;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*; // Import AWT for JFrame
+import java.awt.*;
 import java.util.List;
-import java.util.Vector;
 
 public class BillingController {
     private final BillingPanel view;
@@ -29,13 +27,12 @@ public class BillingController {
     private final InsuranceDAO insuranceDAO;
     private final BillingHandler billProcessingChain;
     private final IUser currentUser;
-    private final JFrame mainFrame; // <-- ADDED: Field for the main frame
+    private final JFrame mainFrame;
     private List<MedicalBill> currentBills; // To hold the search results
 
-    // MODIFIED CONSTRUCTOR: Now accepts JFrame mainFrame
     public BillingController(BillingPanel view, JFrame mainFrame, IUser currentUser) {
         this.view = view;
-        this.mainFrame = mainFrame; // <-- INITIALIZED
+        this.mainFrame = mainFrame;
         this.billingDAO = new BillingDAO();
         this.patientDAO = new PatientDAO();
         this.insuranceDAO = new InsuranceDAO();
@@ -59,12 +56,23 @@ public class BillingController {
         view.deleteBillButton.addActionListener(e -> deleteBill());
         view.printBillButton.addActionListener(e -> printBill());
         view.viewLogButton.addActionListener(e -> viewLog());
+        view.payNowButton.addActionListener(e -> payNow()); // NEW: Pay Now action
 
         view.billsTable.getSelectionModel().addListSelectionListener(e -> {
-            boolean rowSelected = view.billsTable.getSelectedRow() != -1;
-            view.deleteBillButton.setEnabled(rowSelected && currentUser.hasPermission("can_delete_bill"));
-            view.printBillButton.setEnabled(rowSelected);
-            view.viewLogButton.setEnabled(rowSelected);
+            if (!e.getValueIsAdjusting()) {
+                boolean rowSelected = view.billsTable.getSelectedRow() != -1;
+                MedicalBill selectedBill = view.getSelectedBillFromTable(currentBills);
+
+                view.deleteBillButton.setEnabled(rowSelected && currentUser.hasPermission("can_delete_bill"));
+                view.printBillButton.setEnabled(rowSelected && selectedBill != null);
+                view.viewLogButton.setEnabled(rowSelected && selectedBill != null);
+
+                // Enable Pay Now button only if bill has remaining balance
+                boolean canPay = rowSelected && selectedBill != null &&
+                        selectedBill.getRemainingBalance() > 0.01 && // Has remaining balance
+                        currentUser.hasPermission("can_process_payments");
+                view.payNowButton.setEnabled(canPay);
+            }
         });
     }
 
@@ -77,37 +85,31 @@ public class BillingController {
 
         currentBills = billingDAO.getBillsByPatientId(patientId);
 
-        String[] columnNames = {"Bill ID", "Service", "Original Amount", "Final Amount", "Status"};
-        DefaultTableModel model = new DefaultTableModel(columnNames, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
-        };
+        // Use the new method from BillingPanel to set the data
+        view.setBillsTableData(currentBills);
 
-        for (MedicalBill bill : currentBills) {
-            Vector<Object> row = new Vector<>();
-            row.add(bill.getBillId());
-            row.add(bill.getServiceDescription());
-            row.add(String.format("%.2f", bill.getAmount()));
-            row.add(String.format("%.2f", bill.getFinalAmount()));
-            row.add(bill.getStatus());
-            model.addRow(row);
+        if (currentBills.isEmpty()) {
+            JOptionPane.showMessageDialog(view, "No bills found for Patient ID: " + patientId, "Search Results", JOptionPane.INFORMATION_MESSAGE);
         }
-        view.billsTable.setModel(model);
     }
 
     private void deleteBill() {
         if (!currentUser.hasPermission("can_delete_bill")) {
-            JOptionPane.showMessageDialog(view, "You do not have permission to delete bills.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(mainFrame, "You do not have permission to delete bills.", "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        int selectedRow = view.billsTable.getSelectedRow();
-        if (selectedRow == -1) return;
+        MedicalBill selectedBill = view.getSelectedBillFromTable(currentBills);
+        if (selectedBill == null) {
+            JOptionPane.showMessageDialog(view, "Please select a bill to delete.", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-        MedicalBill selectedBill = currentBills.get(selectedRow);
         int choice = JOptionPane.showConfirmDialog(view,
-                "Are you sure you want to delete Bill #" + selectedBill.getBillId() + "?",
-                "Confirm Deletion", JOptionPane.YES_NO_OPTION);
+                "Are you sure you want to delete Bill #" + selectedBill.getBillId() + "?\n" +
+                        "Service: " + selectedBill.getServiceDescription() + "\n" +
+                        "Amount: $" + String.format("%.2f", selectedBill.getFinalAmount()),
+                "Confirm Deletion", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
         if (choice == JOptionPane.YES_OPTION) {
             boolean success = billingDAO.deleteBill(selectedBill.getBillId());
@@ -121,10 +123,12 @@ public class BillingController {
     }
 
     private void printBill() {
-        int selectedRow = view.billsTable.getSelectedRow();
-        if (selectedRow == -1) return;
+        MedicalBill selectedBill = view.getSelectedBillFromTable(currentBills);
+        if (selectedBill == null) {
+            JOptionPane.showMessageDialog(view, "Please select a bill to print.", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-        MedicalBill selectedBill = currentBills.get(selectedRow);
         PatientRecord patient = patientDAO.getPatientById(selectedBill.getPatientId());
 
         if (patient != null) {
@@ -137,56 +141,182 @@ public class BillingController {
     }
 
     private void viewLog() {
-        int selectedRow = view.billsTable.getSelectedRow();
-        if (selectedRow == -1) return;
+        MedicalBill selectedBill = view.getSelectedBillFromTable(currentBills);
+        if (selectedBill == null) {
+            JOptionPane.showMessageDialog(view, "Please select a bill to view its log.", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-        MedicalBill selectedBillStub = currentBills.get(selectedRow);
-        MedicalBill fullBill = billingDAO.getBillById(selectedBillStub.getBillId());
+        // Get the full bill details from database to ensure we have the complete log
+        MedicalBill fullBill = billingDAO.getBillById(selectedBill.getBillId());
 
         if (fullBill != null) {
             JTextArea textArea = new JTextArea(20, 50);
             textArea.setText(fullBill.getProcessingLog());
             textArea.setEditable(false);
+            textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
             JScrollPane scrollPane = new JScrollPane(textArea);
 
             JOptionPane.showMessageDialog(view,
                     scrollPane,
-                    "Processing Log for Bill #" + fullBill.getBillId(),
+                    "Processing Log for Bill #" + fullBill.getBillId() + " - " + fullBill.getServiceDescription(),
                     JOptionPane.INFORMATION_MESSAGE);
         } else {
             JOptionPane.showMessageDialog(view, "Could not retrieve full details for this bill.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private void processBill() {
-        String patientId = view.createPatientIdField.getText().trim();
-        PatientRecord patient = patientDAO.getPatientById(patientId);
+    // NEW METHOD: Handle payment processing
+    private void payNow() {
+        MedicalBill selectedBill = view.getSelectedBillFromTable(currentBills);
+        if (selectedBill == null) {
+            JOptionPane.showMessageDialog(view, "Please select a bill to make a payment.", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
+        if (!currentUser.hasPermission("can_process_payments")) {
+            JOptionPane.showMessageDialog(mainFrame, "You do not have permission to process payments.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        double remainingBalance = selectedBill.getRemainingBalance();
+        if (remainingBalance <= 0.01) {
+            JOptionPane.showMessageDialog(view, "This bill is already fully paid.", "Payment Status", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Show payment dialog
+        String paymentAmountStr = JOptionPane.showInputDialog(view,
+                "Bill #" + selectedBill.getBillId() + " - " + selectedBill.getServiceDescription() + "\n" +
+                        "Final Amount: $" + String.format("%.2f", selectedBill.getFinalAmount()) + "\n" +
+                        "Amount Paid: $" + String.format("%.2f", selectedBill.getAmountPaid()) + "\n" +
+                        "Remaining Balance: $" + String.format("%.2f", remainingBalance) + "\n\n" +
+                        "Enter payment amount:",
+                "Process Payment",
+                JOptionPane.QUESTION_MESSAGE);
+
+        if (paymentAmountStr != null && !paymentAmountStr.trim().isEmpty()) {
+            try {
+                double paymentAmount = Double.parseDouble(paymentAmountStr.trim());
+
+                if (paymentAmount <= 0) {
+                    JOptionPane.showMessageDialog(view, "Payment amount must be greater than 0.", "Invalid Amount", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                if (paymentAmount > remainingBalance) {
+                    int choice = JOptionPane.showConfirmDialog(view,
+                            "Payment amount ($" + String.format("%.2f", paymentAmount) + ") exceeds remaining balance ($" + String.format("%.2f", remainingBalance) + ").\n" +
+                                    "This will result in an overpayment. Continue?",
+                            "Overpayment Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+                    if (choice != JOptionPane.YES_OPTION) {
+                        return;
+                    }
+                }
+
+                // Process the payment
+                double newAmountPaid = selectedBill.getAmountPaid() + paymentAmount;
+                String newStatus = (newAmountPaid >= selectedBill.getFinalAmount()) ? "Paid" : "Partially Paid";
+
+                boolean success = billingDAO.updateAmountPaidAndStatus(selectedBill.getBillId(), newAmountPaid, newStatus);
+
+                if (success) {
+                    JOptionPane.showMessageDialog(view,
+                            "Payment processed successfully!\n" +
+                                    "Payment Amount: $" + String.format("%.2f", paymentAmount) + "\n" +
+                                    "New Total Paid: $" + String.format("%.2f", newAmountPaid) + "\n" +
+                                    "New Status: " + newStatus,
+                            "Payment Successful", JOptionPane.INFORMATION_MESSAGE);
+
+                    searchBills(); // Refresh the table to show updated amounts
+                } else {
+                    JOptionPane.showMessageDialog(view, "Failed to process payment. Please try again.", "Payment Error", JOptionPane.ERROR_MESSAGE);
+                }
+
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(view, "Invalid payment amount. Please enter a valid number.", "Input Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void processBill() {
+        if (!currentUser.hasPermission("can_create_bill")) {
+            JOptionPane.showMessageDialog(mainFrame, "You do not have permission to create bills.", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String patientId = view.createPatientIdField.getText().trim();
+        String service = view.serviceField.getText().trim();
+        String amountStr = view.amountField.getText().trim();
+
+        // Validation
+        if (patientId.isEmpty()) {
+            JOptionPane.showMessageDialog(view, "Please enter a Patient ID.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (service.isEmpty()) {
+            JOptionPane.showMessageDialog(view, "Please enter a service description.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (amountStr.isEmpty()) {
+            JOptionPane.showMessageDialog(view, "Please enter an amount.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        PatientRecord patient = patientDAO.getPatientById(patientId);
         if (patient == null) {
             JOptionPane.showMessageDialog(view, "Patient with ID '" + patientId + "' not found.", "Validation Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        String service = view.serviceField.getText();
-        String amountStr = view.amountField.getText();
-
         double amount;
         try {
             amount = Double.parseDouble(amountStr);
+            if (amount <= 0) {
+                JOptionPane.showMessageDialog(view, "Amount must be greater than 0.", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(view, "Invalid amount.", "Input Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(view, "Invalid amount. Please enter a valid number.", "Input Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
+        // Create and process the bill
         MedicalBill bill = new MedicalBill(patientId, service, amount);
         BillProcessingRequest request = new BillProcessingRequest(bill, patient);
 
-        billProcessingChain.processBill(request);
+        try {
+            billProcessingChain.processBill(request);
 
-        JOptionPane.showMessageDialog(view, "Processing complete.\nFinal Status: " + bill.getStatus(), "Processing Result", JOptionPane.INFORMATION_MESSAGE);
+            // Save the processed bill to database
+            int billId = billingDAO.saveBill(bill);
+            if (billId > 0) {
+                bill.setBillId(billId);
+                JOptionPane.showMessageDialog(view,
+                        "Bill processed and saved successfully!\n" +
+                                "Bill ID: " + billId + "\n" +
+                                "Final Status: " + bill.getStatus() + "\n" +
+                                "Final Amount: $" + String.format("%.2f", bill.getFinalAmount()),
+                        "Processing Complete", JOptionPane.INFORMATION_MESSAGE);
 
-        if (patientId.equals(view.searchPatientIdField.getText().trim())) {
-            searchBills();
+                // Clear the form
+                view.clearCreateBillForm();
+
+                // Refresh search results if showing bills for the same patient
+                if (patientId.equals(view.searchPatientIdField.getText().trim())) {
+                    searchBills();
+                }
+            } else {
+                JOptionPane.showMessageDialog(view, "Bill processed but failed to save to database.", "Save Error", JOptionPane.WARNING_MESSAGE);
+            }
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(view,
+                    "Error processing bill: " + ex.getMessage(),
+                    "Processing Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 }
