@@ -27,8 +27,8 @@ public class PatientRecord implements Cloneable, Visitable {
     public String getPatientId() { return patientId; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public List<String> getMedicalHistory() { return new ArrayList<>(medicalHistory); } // Return copy
-    public List<String> getTreatmentPlans() { return new ArrayList<>(treatmentPlans); } // Return copy
+    public String getMedicalHistory() { return String.valueOf(new ArrayList<>(medicalHistory)); } // Return copy
+    public String getTreatmentPlans() { return String.valueOf(new ArrayList<>(treatmentPlans)); } // Return copy
     public InsurancePlan getInsurancePlan() { return insurancePlan; }
     public void setInsurancePlan(InsurancePlan insurancePlan) { this.insurancePlan = insurancePlan; }
 
