@@ -2,87 +2,265 @@
 
 <div align="center">
 
-![Java](https://img.shields.io/badge/Java-17+-007396?style=for-the-badge&logo=java&logoColor=white)
+![Java](https://img.shields.io/badge/Java-21+-007396?style=for-the-badge&logo=java&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
 ![Maven](https://img.shields.io/badge/Maven-3.9+-C71A36?style=for-the-badge&logo=apache-maven&logoColor=white)
 ![Swing](https://img.shields.io/badge/Swing-UI-007396?style=for-the-badge&logo=java&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-1.4-blue?style=for-the-badge)
 
-**A comprehensive healthcare management system built with Java, featuring patient management, appointment scheduling, billing, and advanced reporting capabilities.**
+**🚀 A comprehensive, enterprise-grade healthcare management system built with Java 21, featuring advanced patient management, intelligent appointment scheduling, automated billing, and powerful reporting capabilities with modern UI/UX design.**
 
 📚 **[📖 Complete Project Documentation](https://macnalk.github.io/GlobeMed-Healthcare-Management-System-Docs/)** - Detailed documentation, guides, and specifications
 
-[🚀 Getting Started](#-getting-started) • [📋 Features](#-features) • [🏗️ Architecture](#️-architecture) • [📖 Documentation](#-documentation)
+[🚀 Quick Start](#-getting-started) • [📊 UML Diagrams](#-uml-class-diagrams) • [📋 Features](#-features) • [🏗️ Architecture](#️-architecture) • [📖 API Docs](#-api-documentation)
+
+[![GitHub stars](https://img.shields.io/github/stars/isharax9/healthcare-system?style=social)](https://github.com/isharax9/healthcare-system/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/isharax9/healthcare-system?style=social)](https://github.com/isharax9/healthcare-system/network/members)
+
+---
+
+## 📚 Table of Contents
+
+<div align="center">
+
+| Section | Description |
+|---------|-------------|
+| [📊 UML Class Diagrams](#-uml-class-diagrams) | System architecture and design patterns visualization |
+| [📋 Features](#-features) | Comprehensive feature overview and capabilities |
+| [🛠️ Technology Stack](#️-technology-stack) | Technologies, frameworks, and tools used |
+| [🏗️ Architecture](#️-architecture) | System design and architectural patterns |
+| [🚀 Getting Started](#-getting-started) | Installation guide and setup instructions |
+| [📖 Usage Guide](#-usage-guide) | Step-by-step usage instructions |
+| [🗃️ Database Schema](#️-database-schema) | Database structure and relationships |
+| [🔧 Configuration](#-configuration) | Application configuration and customization |
+| [🧪 Testing](#-testing) | Testing guidelines and procedures |
+| [📚 API Documentation](#-api-documentation) | API reference and code examples |
+| [🤝 Contributing](#-contributing) | How to contribute to the project |
+| [📜 License & Legal](#-license--legal) | Licensing information and compliance |
+| [👨‍💻 Authors & Acknowledgments](#-authors--acknowledgments) | Credits and acknowledgments |
+| [📞 Support & Community](#-support--community) | Getting help and community resources |
+
+</div>
 
 </div>
 
 ---
 
+## 📊 UML Class Diagrams
+
+<div align="center">
+
+### 🔗 Quick Navigation
+[🏗️ Complete Overview](#complete-application-overview) • [📊 Entity Relationships](#entity-relationship-diagram) • [👤 Patient Management](#part-a---patient-record-management-memento-prototype) • [📅 Appointments](#part-b---appointment-scheduling-mediator) • [💰 Billing](#part-c---billing-and-insurance-claims-chain-of-responsibility) • [👨‍⚕️ Staff Roles](#part-d---medical-staff-roles-and-permissions-decorator) • [📋 Reports](#part-e---generating-medical-reports-visitor) • [🔐 Security](#part-f---security-considerations-decorator-dao)
+
+</div>
+
+> 💡 **Tip**: Right-click any image and select "Open image in new tab" to view at maximum quality
+
+### Complete Application Overview
+<div align="center">
+<img src="UML%20Class%20Diagrams/Complete%20Application%20UML%20Class%20Diagram.png" alt="Complete Application UML Class Diagram" width="700">
+</div>
+
+*Complete system architecture showing all components, design patterns, and their relationships*
+
+### Entity Relationship Diagram  
+<div align="center">
+<img src="UML%20Class%20Diagrams/EER.png" alt="Entity Relationship Diagram" width="700">
+</div>
+
+*Database schema and table relationships for the healthcare management system*
+
+### Part A - Patient Record Management (Memento, Prototype)
+<div align="center">
+<img src="UML%20Class%20Diagrams/Part%20A%20-%20Patient%20Record%20Management%20-%20Memento,%20Prototype.png" alt="Patient Record Management" width="650">
+</div>
+
+*Implementation of Memento pattern for patient history tracking and Prototype pattern for record templates*
+
+### Part B - Appointment Scheduling (Mediator)
+<div align="center">
+<img src="UML%20Class%20Diagrams/Part%20B%20-%20Appointment%20Scheduling%20-%20Mediator.png" alt="Appointment Scheduling" width="650">
+</div>
+
+*Mediator pattern implementation for handling appointment conflicts and scheduling logic*
+
+### Part C - Billing and Insurance Claims (Chain of Responsibility)
+<div align="center">
+<img src="UML%20Class%20Diagrams/Part%20C%20-%20Billing%20and%20Insurance%20Claims%20-%20Chain%20of%20Responsibility.png" alt="Billing and Insurance Claims" width="650">
+</div>
+
+*Chain of Responsibility pattern for processing insurance claims and payment workflows*
+
+### Part D - Medical Staff Roles and Permissions (Decorator)
+<div align="center">
+<img src="UML%20Class%20Diagrams/Part%20D%20-%20Medical%20Staff%20Roles%20and%20Permissions%20-%20Decorator.png" alt="Medical Staff Roles and Permissions" width="650">
+</div>
+
+*Decorator pattern implementation for flexible role-based access control system*
+
+### Part E - Generating Medical Reports (Visitor)
+<div align="center">
+<img src="UML%20Class%20Diagrams/Part%20E%20-%20Generating%20Medical%20Reports%20-%20Visitor.png" alt="Generating Medical Reports" width="650">
+</div>
+
+*Visitor pattern for extensible report generation and data analysis capabilities*
+
+### Part F - Security Considerations (Decorator, DAO)
+<div align="center">
+<img src="UML%20Class%20Diagrams/Part%20F%20-%20Security%20Considerations%20-%20Decorator,%20DAO.png" alt="Security Considerations" width="650">
+</div>
+
+*Security architecture using Decorator pattern for permissions and DAO pattern for secure data access*
+
+---
+
+
 ## 📋 Features
 
-### 🏥 **Core Healthcare Management**
-- **Patient Records Management** with history tracking (Memento Pattern)
-- **Appointment Scheduling** with conflict resolution (Mediator Pattern)  
-- **Medical Staff Management** with role-based permissions (Decorator Pattern)
-- **Insurance Claims Processing** with automated workflows (Chain of Responsibility)
+<div align="center">
 
-### 💰 **Financial Management**
-- **Medical Billing System** with insurance integration
-- **Payment Processing** and tracking
-- **Financial Reporting** with comprehensive analytics
-- **Aged Receivables Analysis** for outstanding payments
+### 🌟 **Core Healthcare Management Suite**
 
-### 📊 **Advanced Reporting**
-- **Patient Financial Summaries** with detailed breakdowns
-- **Service Revenue Analysis** by department/service type
-- **Comprehensive Financial Reports** with trend analysis
-- **PDF Generation** for bills and reports (iText integration)
+</div>
 
-### 🔐 **Security & Access Control**
-- **Role-Based Authentication** (Admin, Doctor, Nurse)
-- **Permission-Based Feature Access** 
-- **Secure User Management** with encrypted credentials
-- **Audit Trail** for sensitive operations
+<table>
+<tr>
+<td width="50%">
 
-### 🎨 **User Experience**
-- **Intuitive Swing GUI** with modern design principles
-- **Dark/Light Theme Support** for user preference
-- **Responsive Layout** adapting to different screen sizes
-- **Keyboard Shortcuts** for efficient workflow
+#### 🏥 **Patient & Records Management**
+- 📋 **Comprehensive Patient Profiles** with demographic data
+- 🔄 **History Tracking** using Memento Pattern for audit trails  
+- 🔍 **Advanced Search & Filtering** with multiple criteria
+- 📊 **Insurance Plan Integration** with automatic calculations
+- 🔒 **HIPAA-Compliant** data handling and encryption
+
+#### 💰 **Financial & Billing System**
+- 💳 **Medical Billing Engine** with itemized service tracking
+- 🏛️ **Insurance Claims Processing** with automated workflows
+- 💸 **Payment Management** supporting multiple methods
+- 📈 **Financial Analytics** with trend analysis
+- 🧾 **Professional PDF Bills** with company branding
+
+</td>
+<td width="50%">
+
+#### 📅 **Appointment & Scheduling**
+- 🗓️ **Intelligent Scheduling** with conflict detection
+- ⚡ **Real-time Availability** checking across all staff
+- 🔔 **Automated Notifications** for upcoming appointments
+- 📱 **Multi-doctor Coordination** using Mediator Pattern
+- ⏰ **Flexible Time Slots** with customizable durations
+
+#### 🔐 **Security & Access Control**
+- 👤 **Role-Based Authentication** (Admin/Doctor/Nurse)
+- 🛡️ **Permission-Based Features** using Decorator Pattern
+- 🔐 **Encrypted User Credentials** with secure storage
+- 📋 **Comprehensive Audit Trails** for compliance
+- 🚨 **Data Protection** following healthcare regulations
+
+</td>
+</tr>
+</table>
+
+### 📊 **Advanced Reporting & Analytics**
+
+<div align="center">
+
+| Report Type | Features | Output Format | Key Benefits |
+|-------------|----------|---------------|--------------|
+| 💰 **Financial Reports** | Revenue analysis, payment tracking, aged receivables | PDF, Excel | Business intelligence & decision making |
+| 👥 **Patient Analytics** | Demographics, visit patterns, treatment outcomes | PDF, Charts | Improved patient care & resource planning |
+| 📈 **Operational Reports** | Staff productivity, appointment efficiency, resource utilization | Dashboard, PDF | Operational optimization & cost reduction |
+| 🏥 **Service Analysis** | Department performance, service revenue, trend analysis | Visual Charts | Strategic planning & service improvement |
+
+</div>
+
+### 🎨 **User Experience & Interface**
+
+<div align="center">
+
+**🖥️ Modern Desktop Application** • **🌓 Dark/Light Themes** • **⌨️ Keyboard Shortcuts** • **📱 Responsive Design** • **🎯 Intuitive Navigation**
+
+</div>
+
+> 🚀 **Built with Enterprise Patterns**: Memento, Mediator, Chain of Responsibility, Decorator, Visitor, and DAO patterns for maintainable, scalable architecture
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Backend** | Java 17+ | Core application logic |
-| **Frontend** | Java Swing | Desktop GUI interface |
-| **Database** | MySQL 8.0+ | Data persistence |
-| **Build Tool** | Maven 3.9+ | Dependency management |
-| **PDF Generation** | iText 5.5.13 | Report and bill generation |
-| **PDF Processing** | Apache PDFBox 2.0.29 | Additional PDF utilities |
+<div align="center">
+
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
+| **Backend Language** | ☕ Java | 21+ | Core application logic & enterprise features |
+| **Frontend Framework** | 🖥️ Java Swing | Built-in | Desktop GUI interface with modern theming |
+| **Database Engine** | 🗄️ MySQL | 8.0+ | Robust data persistence & ACID compliance |
+| **Build Automation** | 🔧 Apache Maven | 3.9+ | Dependency management & project lifecycle |
+| **PDF Generation** | 📄 iText | 5.5.13.3 | Professional bill & report generation |
+| **PDF Processing** | 📋 Apache PDFBox | 2.0.29 | Advanced PDF manipulation utilities |
+| **Design Patterns** | 🏗️ Gang of Four | Multiple | Enterprise architecture patterns |
+
+</div>
 
 ---
 
 ## 🏗️ Architecture
 
-### Design Patterns Implementation
+<div align="center">
+
+### 🎯 **Design Pattern Implementation Strategy**
+
+</div>
+
+<table>
+<tr>
+<td width="50%">
+
+#### 🔄 **Behavioral Patterns**
+- **🎭 Memento Pattern** - Patient history tracking & undo operations
+- **🤝 Mediator Pattern** - Appointment scheduling coordination  
+- **⛓️ Chain of Responsibility** - Insurance claim processing pipeline
+- **👁️ Visitor Pattern** - Extensible report generation system
+
+</td>
+<td width="50%">
+
+#### 🏗️ **Structural & Creational Patterns**
+- **🎨 Decorator Pattern** - Role-based permission system
+- **🏭 DAO Pattern** - Data access abstraction layer
+- **📋 Prototype Pattern** - Patient record templates
+- **🔧 MVC Pattern** - Clean separation of concerns
+
+</td>
+</tr>
+</table>
+
+### 🌐 **System Architecture Overview**
 
 ```mermaid
 graph TB
-    A[UI Layer - Swing Components] --> B[Controller Layer - MVC Pattern]
-    B --> C[Business Logic Layer]
-    C --> D[Data Access Layer - DAO Pattern]
-    D --> E[MySQL Database]
+    A[🖥️ UI Layer - Swing Components] --> B[🎮 Controller Layer - MVC Pattern]
+    B --> C[💼 Business Logic Layer]
+    C --> D[🗄️ Data Access Layer - DAO Pattern]
+    D --> E[🐬 MySQL Database]
     
-    F[Memento Pattern] --> G[Patient History]
-    H[Mediator Pattern] --> I[Appointment Scheduling]
-    J[Chain of Responsibility] --> K[Insurance Processing]
-    L[Decorator Pattern] --> M[User Permissions]
-    N[Visitor Pattern] --> O[Report Generation]
+    F[📝 Memento Pattern] --> G[👤 Patient History]
+    H[🤝 Mediator Pattern] --> I[📅 Appointment Scheduling]
+    J[⛓️ Chain of Responsibility] --> K[💰 Insurance Processing]
+    L[🎨 Decorator Pattern] --> M[🔐 User Permissions]
+    N[👁️ Visitor Pattern] --> O[📊 Report Generation]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#ffebee
 ```
 
-### Core Components
+### 💻 **Core Implementation Examples**
 
 #### 🎯 **Authentication System**
 ```java
@@ -90,6 +268,11 @@ graph TB
 IUser user = new BaseUser(username, role, doctorId);
 user = new AdminRole(user);  // Adds admin permissions
 user = new DoctorRole(user); // Adds doctor permissions
+
+// Check permissions
+if (user.hasPermission("PATIENT_MANAGEMENT")) {
+    // Access granted
+}
 ```
 
 #### 📋 **Patient Management**
@@ -99,52 +282,35 @@ RecordHistory history = new RecordHistory(patientRecord);
 history.save();           // Create snapshot
 patientRecord.update();   // Make changes
 history.undo();          // Restore previous state
+
+// Prototype pattern for templates
+PatientRecord template = TemplateManager.getTemplate("BASIC_PATIENT");
+PatientRecord newPatient = template.clone();
 ```
 
 #### 📅 **Appointment Scheduling**
 ```java
 // Conflict resolution with Mediator Pattern
 SchedulingMediator mediator = new SchedulingMediator();
-mediator.scheduleAppointment(patient, doctor, dateTime);
+AppointmentResult result = mediator.scheduleAppointment(
+    patient, doctor, dateTime, duration
+);
+
+if (result.hasConflict()) {
+    List<TimeSlot> alternatives = result.getAlternatives();
+}
 ```
 
----
+#### 💰 **Insurance Processing**
+```java
+// Chain of Responsibility for claims
+ClaimProcessor basicProcessor = new BasicClaimProcessor();
+ClaimProcessor premiumProcessor = new PremiumClaimProcessor();
+ClaimProcessor vipProcessor = new VIPClaimProcessor();
 
-## 📊 UML Class Diagrams
-
-**Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality**
-
-### Complete Application Overview
-![Complete Application UML Class Diagram](UML%20Class%20Diagrams/Complete%20Application%20UML%20Class%20Diagram.png)
-*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
-
-### Entity Relationship Diagram
-![EER Diagram](UML%20Class%20Diagrams/EER.png)
-*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
-
-### Part A - Patient Record Management (Memento, Prototype)
-![Patient Record Management](UML%20Class%20Diagrams/Part%20A%20-%20Patient%20Record%20Management%20-%20Memento,%20Prototype.png)
-*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
-
-### Part B - Appointment Scheduling (Mediator)
-![Appointment Scheduling](UML%20Class%20Diagrams/Part%20B%20-%20Appointment%20Scheduling%20-%20Mediator.png)
-*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
-
-### Part C - Billing and Insurance Claims (Chain of Responsibility)
-![Billing and Insurance Claims](UML%20Class%20Diagrams/Part%20C%20-%20Billing%20and%20Insurance%20Claims%20-%20Chain%20of%20Responsibility.png)
-*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
-
-### Part D - Medical Staff Roles and Permissions (Decorator)
-![Medical Staff Roles and Permissions](UML%20Class%20Diagrams/Part%20D%20-%20Medical%20Staff%20Roles%20and%20Permissions%20-%20Decorator.png)
-*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
-
-### Part E - Generating Medical Reports (Visitor)
-![Generating Medical Reports](UML%20Class%20Diagrams/Part%20E%20-%20Generating%20Medical%20Reports%20-%20Visitor.png)
-*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
-
-### Part F - Security Considerations (Decorator, DAO)
-![Security Considerations](UML%20Class%20Diagrams/Part%20F%20-%20Security%20Considerations%20-%20Decorator,%20DAO.png)
-*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
+basicProcessor.setNext(premiumProcessor).setNext(vipProcessor);
+ClaimResult result = basicProcessor.process(claim);
+```
 
 ---
 
@@ -152,60 +318,85 @@ mediator.scheduleAppointment(patient, doctor, dateTime);
 
 ### Prerequisites
 
-Ensure you have the following installed:
-- ☕ **Java Development Kit (JDK) 17+**
-- 🗄️ **MySQL Server 8.0+**
-- 🔧 **Apache Maven 3.9+**
-- 🖥️ **IDE** (IntelliJ IDEA, Eclipse, or VS Code recommended)
+<div align="center">
+
+| Requirement | Version | Download Link | Purpose |
+|-------------|---------|---------------|---------|
+| ☕ **Java Development Kit (JDK)** | 21+ | [Oracle JDK](https://www.oracle.com/java/technologies/downloads/) \| [OpenJDK](https://openjdk.org/) | Core runtime & development |
+| 🗄️ **MySQL Server** | 8.0+ | [MySQL Downloads](https://dev.mysql.com/downloads/mysql/) | Database engine |
+| 🔧 **Apache Maven** | 3.9+ | [Maven Downloads](https://maven.apache.org/download.cgi) | Build automation |
+| 🖥️ **IDE (Recommended)** | Latest | [IntelliJ IDEA](https://www.jetbrains.com/idea/) \| [Eclipse](https://www.eclipse.org/) \| [VS Code](https://code.visualstudio.com/) | Development environment |
+
+</div>
+
+> 💡 **Note**: This project uses Java 21 features including pattern matching, records, and enhanced switch expressions for optimal performance and code clarity.
 
 ### Installation
 
-1. **Clone the Repository**
+<div align="center">
+
+#### 🚀 **Quick Setup Guide**
+
+</div>
+
+1. **📥 Clone the Repository**
    ```bash
    git clone https://github.com/isharax9/healthcare-system.git
    cd healthcare-system
    ```
 
-2. **Database Setup**
+2. **🗄️ Database Setup**
    ```bash
-   # Create database and import schema
+   # Start MySQL and create database
    mysql -u root -p
-   CREATE DATABASE globemed_db;
+   ```
+   ```sql
+   CREATE DATABASE globemed_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
    USE globemed_db;
    SOURCE globemed_db.sql;
    ```
 
-3. **Configure Database Connection**
+3. **⚙️ Configure Database Connection**
    
-   Create `src/main/java/com/globemed/db/DatabaseManager.java`:
+   Update `src/main/java/com/globemed/db/DatabaseManager.java`:
    ```java
-   public class DatabaseManager {
-       private static final String URL = "jdbc:mysql://localhost:3306/globemed_db";
-       private static final String USERNAME = "your_username";
-       private static final String PASSWORD = "your_password";
-       
-       public static Connection getConnection() throws SQLException {
-           return DriverManager.getConnection(URL, USERNAME, PASSWORD);
-       }
-   }
+   private static final String JDBC_URL = "jdbc:mysql://localhost:3306/globemed_db";
+   private static final String USERNAME = "your_username";  // Update this
+   private static final String PASSWORD = "your_password";  // Update this
    ```
 
-4. **Build and Run**
+4. **🔧 Build and Run**
    ```bash
-   # Compile the project
+   # Clean and compile the project
    mvn clean compile
    
    # Run the application
    mvn exec:java -Dexec.mainClass="com.globemed.Main"
    ```
 
+<div align="center">
+
+#### 🎉 **First Launch**
+
+Upon successful launch, you'll see the modern Swing GUI with login screen.
+
+> 💡 **Pro Tip**: Use the default credentials below to explore all features immediately!
+
+</div>
+
 ### 🔑 Default Login Credentials
 
-| Role | Username | Password | Access Level |
-|------|----------|----------|--------------|
-| Admin | `admin` | `admin123` | Full system access |
-| Doctor | `doctor1` | `doc123` | Patient & appointment management |
-| Nurse | `nurse1` | `nurse123` | Limited patient access |
+<div align="center">
+
+| 👤 Role | 🔐 Username | 🗝️ Password | 🎯 Access Level | 📋 Capabilities |
+|---------|-------------|-------------|-----------------|------------------|
+| 👑 **Admin** | `admin` | `admin123` | 🔓 Full system access | User management, system configuration, all reports |
+| 👨‍⚕️ **Doctor** | `doctor1` | `doc123` | 📋 Clinical access | Patient records, appointments, medical reports |
+| 👩‍⚕️ **Nurse** | `nurse1` | `nurse123` | 📝 Limited access | Basic patient info, appointment viewing |
+
+</div>
+
+> ⚠️ **Security Note**: Change these default credentials immediately in production environments!
 
 ---
 
@@ -383,9 +574,33 @@ Please include:
 
 ---
 
-## 📜 License
+## 📜 License & Legal
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+<div align="center">
+
+### 📄 **Primary License**
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for complete details.
+
+### ⚖️ **Third-Party Components**
+This software includes several third-party libraries with their respective licenses:
+
+| Component | License | Usage |
+|-----------|---------|--------|
+| 🔗 **iText PDF** | AGPL v3.0 | PDF generation for bills and reports |
+| 📄 **Apache PDFBox** | Apache 2.0 | Additional PDF processing utilities |
+| 🗄️ **MySQL Connector/J** | GPL v2.0 + FOSS Exception | Database connectivity |
+
+### 🏥 **Healthcare Compliance Notice**
+> **⚠️ Important**: This software handles sensitive healthcare data. Ensure compliance with:
+> - **HIPAA** (United States) - Health Insurance Portability and Accountability Act
+> - **GDPR** (European Union) - General Data Protection Regulation  
+> - **PIPEDA** (Canada) - Personal Information Protection and Electronic Documents Act
+> - Other applicable local healthcare privacy regulations
+
+### 🛡️ **Security & Disclaimer**
+This software is provided for **educational and demonstration purposes**. While implementing industry-standard security practices, it should be thoroughly reviewed and customized before production use in healthcare environments.
+
+</div>
 
 ---
 
@@ -403,18 +618,31 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ---
 
-## 📞 Support & Contact
+## 📞 Support & Community
 
-- 📧 **Email**: [isharax9@gmail.com](mailto:isharax9@gmail.com)
-- 💬 **Telegram**: [https://t.me/mac_knight141](https://t.me/mac_knight141)
-- 💼 **LinkedIn**: [https://www.linkedin.com/in/isharax9/](https://www.linkedin.com/in/isharax9/)
-- 📸 **Instagram**: [https://www.instagram.com/mac_knight141/](https://www.instagram.com/mac_knight141/)
-- 🐦 **Twitter**: [https://twitter.com/isharax9](https://twitter.com/isharax9)
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/isharax9/healthcare-system/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/isharax9/healthcare-system/discussions)
-- 📖 **Documentation**: [Complete Project Docs](https://macnalk.github.io/GlobeMed-Healthcare-Management-System-Docs/)
+<div align="center">
 
----
+### 💬 **Get Help & Connect**
+
+| Platform | Link | Purpose |
+|----------|------|---------|
+| 📧 **Email** | [isharax9@gmail.com](mailto:isharax9@gmail.com) | Direct support & inquiries |
+| 💬 **Telegram** | [@mac_knight141](https://t.me/mac_knight141) | Quick questions & community |
+| 💼 **LinkedIn** | [isharax9](https://www.linkedin.com/in/isharax9/) | Professional networking |
+| 📸 **Instagram** | [@mac_knight141](https://www.instagram.com/mac_knight141/) | Updates & behind-the-scenes |
+| 🐦 **Twitter** | [@isharax9](https://twitter.com/isharax9) | Announcements & tech discussions |
+
+### 🐛 **Issues & Contributions**
+
+| Type | Link | Description |
+|------|------|-------------|
+| 🐛 **Bug Reports** | [GitHub Issues](https://github.com/isharax9/healthcare-system/issues) | Report bugs and request features |
+| 💬 **Discussions** | [GitHub Discussions](https://github.com/isharax9/healthcare-system/discussions) | Community Q&A and ideas |
+| 📖 **Documentation** | [Project Docs](https://macnalk.github.io/GlobeMed-Healthcare-Management-System-Docs/) | Complete guides and references |
+
+### 🌟 **Show Your Support**
+
+</div>
 
 <div align="center">
 
@@ -422,5 +650,21 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 [![GitHub stars](https://img.shields.io/github/stars/isharax9/healthcare-system?style=social)](https://github.com/isharax9/healthcare-system/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/isharax9/healthcare-system?style=social)](https://github.com/isharax9/healthcare-system/network/members)
+[![GitHub watchers](https://img.shields.io/github/watchers/isharax9/healthcare-system?style=social)](https://github.com/isharax9/healthcare-system/watchers)
+[![GitHub issues](https://img.shields.io/github/issues/isharax9/healthcare-system)](https://github.com/isharax9/healthcare-system/issues)
+
+---
+
+### 🚀 **Ready to Transform Healthcare Management?**
+
+<div align="center" style="margin: 20px 0;">
+
+**[⬇️ Download Now](https://github.com/isharax9/healthcare-system/archive/refs/heads/main.zip)** • **[📖 Read Docs](https://macnalk.github.io/GlobeMed-Healthcare-Management-System-Docs/)** • **[🤝 Contribute](https://github.com/isharax9/healthcare-system/blob/main/CONTRIBUTING.md)**
+
+</div>
+
+**Made with ❤️ by [Ishara Lakshitha](https://github.com/isharax9) • © 2025**
+
+*Empowering Healthcare Through Technology*
 
 </div>
