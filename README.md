@@ -210,23 +210,58 @@
 
 ## 🏗️ Architecture
 
-### Design Patterns Implementation
+<div align="center">
+
+### 🎯 **Design Pattern Implementation Strategy**
+
+</div>
+
+<table>
+<tr>
+<td width="50%">
+
+#### 🔄 **Behavioral Patterns**
+- **🎭 Memento Pattern** - Patient history tracking & undo operations
+- **🤝 Mediator Pattern** - Appointment scheduling coordination  
+- **⛓️ Chain of Responsibility** - Insurance claim processing pipeline
+- **👁️ Visitor Pattern** - Extensible report generation system
+
+</td>
+<td width="50%">
+
+#### 🏗️ **Structural & Creational Patterns**
+- **🎨 Decorator Pattern** - Role-based permission system
+- **🏭 DAO Pattern** - Data access abstraction layer
+- **📋 Prototype Pattern** - Patient record templates
+- **🔧 MVC Pattern** - Clean separation of concerns
+
+</td>
+</tr>
+</table>
+
+### 🌐 **System Architecture Overview**
 
 ```mermaid
 graph TB
-    A[UI Layer - Swing Components] --> B[Controller Layer - MVC Pattern]
-    B --> C[Business Logic Layer]
-    C --> D[Data Access Layer - DAO Pattern]
-    D --> E[MySQL Database]
+    A[🖥️ UI Layer - Swing Components] --> B[🎮 Controller Layer - MVC Pattern]
+    B --> C[💼 Business Logic Layer]
+    C --> D[🗄️ Data Access Layer - DAO Pattern]
+    D --> E[🐬 MySQL Database]
     
-    F[Memento Pattern] --> G[Patient History]
-    H[Mediator Pattern] --> I[Appointment Scheduling]
-    J[Chain of Responsibility] --> K[Insurance Processing]
-    L[Decorator Pattern] --> M[User Permissions]
-    N[Visitor Pattern] --> O[Report Generation]
+    F[📝 Memento Pattern] --> G[👤 Patient History]
+    H[🤝 Mediator Pattern] --> I[📅 Appointment Scheduling]
+    J[⛓️ Chain of Responsibility] --> K[💰 Insurance Processing]
+    L[🎨 Decorator Pattern] --> M[🔐 User Permissions]
+    N[👁️ Visitor Pattern] --> O[📊 Report Generation]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#ffebee
 ```
 
-### Core Components
+### 💻 **Core Implementation Examples**
 
 #### 🎯 **Authentication System**
 ```java
@@ -234,6 +269,11 @@ graph TB
 IUser user = new BaseUser(username, role, doctorId);
 user = new AdminRole(user);  // Adds admin permissions
 user = new DoctorRole(user); // Adds doctor permissions
+
+// Check permissions
+if (user.hasPermission("PATIENT_MANAGEMENT")) {
+    // Access granted
+}
 ```
 
 #### 📋 **Patient Management**
@@ -243,13 +283,34 @@ RecordHistory history = new RecordHistory(patientRecord);
 history.save();           // Create snapshot
 patientRecord.update();   // Make changes
 history.undo();          // Restore previous state
+
+// Prototype pattern for templates
+PatientRecord template = TemplateManager.getTemplate("BASIC_PATIENT");
+PatientRecord newPatient = template.clone();
 ```
 
 #### 📅 **Appointment Scheduling**
 ```java
 // Conflict resolution with Mediator Pattern
 SchedulingMediator mediator = new SchedulingMediator();
-mediator.scheduleAppointment(patient, doctor, dateTime);
+AppointmentResult result = mediator.scheduleAppointment(
+    patient, doctor, dateTime, duration
+);
+
+if (result.hasConflict()) {
+    List<TimeSlot> alternatives = result.getAlternatives();
+}
+```
+
+#### 💰 **Insurance Processing**
+```java
+// Chain of Responsibility for claims
+ClaimProcessor basicProcessor = new BasicClaimProcessor();
+ClaimProcessor premiumProcessor = new PremiumClaimProcessor();
+ClaimProcessor vipProcessor = new VIPClaimProcessor();
+
+basicProcessor.setNext(premiumProcessor).setNext(vipProcessor);
+ClaimResult result = basicProcessor.process(claim);
 ```
 
 ---
@@ -273,52 +334,70 @@ mediator.scheduleAppointment(patient, doctor, dateTime);
 
 ### Installation
 
-1. **Clone the Repository**
+<div align="center">
+
+#### 🚀 **Quick Setup Guide**
+
+</div>
+
+1. **📥 Clone the Repository**
    ```bash
    git clone https://github.com/isharax9/healthcare-system.git
    cd healthcare-system
    ```
 
-2. **Database Setup**
+2. **🗄️ Database Setup**
    ```bash
-   # Create database and import schema
+   # Start MySQL and create database
    mysql -u root -p
-   CREATE DATABASE globemed_db;
+   ```
+   ```sql
+   CREATE DATABASE globemed_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
    USE globemed_db;
    SOURCE globemed_db.sql;
    ```
 
-3. **Configure Database Connection**
+3. **⚙️ Configure Database Connection**
    
-   Create `src/main/java/com/globemed/db/DatabaseManager.java`:
+   Update `src/main/java/com/globemed/db/DatabaseManager.java`:
    ```java
-   public class DatabaseManager {
-       private static final String URL = "jdbc:mysql://localhost:3306/globemed_db";
-       private static final String USERNAME = "your_username";
-       private static final String PASSWORD = "your_password";
-       
-       public static Connection getConnection() throws SQLException {
-           return DriverManager.getConnection(URL, USERNAME, PASSWORD);
-       }
-   }
+   private static final String JDBC_URL = "jdbc:mysql://localhost:3306/globemed_db";
+   private static final String USERNAME = "your_username";  // Update this
+   private static final String PASSWORD = "your_password";  // Update this
    ```
 
-4. **Build and Run**
+4. **🔧 Build and Run**
    ```bash
-   # Compile the project
+   # Clean and compile the project
    mvn clean compile
    
    # Run the application
    mvn exec:java -Dexec.mainClass="com.globemed.Main"
    ```
 
+<div align="center">
+
+#### 🎉 **First Launch**
+
+Upon successful launch, you'll see the modern Swing GUI with login screen.
+
+> 💡 **Pro Tip**: Use the default credentials below to explore all features immediately!
+
+</div>
+
 ### 🔑 Default Login Credentials
 
-| Role | Username | Password | Access Level |
-|------|----------|----------|--------------|
-| Admin | `admin` | `admin123` | Full system access |
-| Doctor | `doctor1` | `doc123` | Patient & appointment management |
-| Nurse | `nurse1` | `nurse123` | Limited patient access |
+<div align="center">
+
+| 👤 Role | 🔐 Username | 🗝️ Password | 🎯 Access Level | 📋 Capabilities |
+|---------|-------------|-------------|-----------------|------------------|
+| 👑 **Admin** | `admin` | `admin123` | 🔓 Full system access | User management, system configuration, all reports |
+| 👨‍⚕️ **Doctor** | `doctor1` | `doc123` | 📋 Clinical access | Patient records, appointments, medical reports |
+| 👩‍⚕️ **Nurse** | `nurse1` | `nurse123` | 📝 Limited access | Basic patient info, appointment viewing |
+
+</div>
+
+> ⚠️ **Security Note**: Change these default credentials immediately in production environments!
 
 ---
 
