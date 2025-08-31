@@ -9,6 +9,8 @@
 
 **A comprehensive healthcare management system built with Java, featuring patient management, appointment scheduling, billing, and advanced reporting capabilities.**
 
+📚 **[📖 Complete Project Documentation](https://macnalk.github.io/GlobeMed-Healthcare-Management-System-Docs/)** - Detailed documentation, guides, and specifications
+
 [🚀 Getting Started](#-getting-started) • [📋 Features](#-features) • [🏗️ Architecture](#️-architecture) • [📖 Documentation](#-documentation)
 
 </div>
@@ -105,6 +107,44 @@ history.undo();          // Restore previous state
 SchedulingMediator mediator = new SchedulingMediator();
 mediator.scheduleAppointment(patient, doctor, dateTime);
 ```
+
+---
+
+## 📊 UML Class Diagrams
+
+**Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality**
+
+### Complete Application Overview
+![Complete Application UML Class Diagram](UML%20Class%20Diagrams/Complete%20Application%20UML%20Class%20Diagram.png)
+*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
+
+### Entity Relationship Diagram
+![EER Diagram](UML%20Class%20Diagrams/EER.png)
+*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
+
+### Part A - Patient Record Management (Memento, Prototype)
+![Patient Record Management](UML%20Class%20Diagrams/Part%20A%20-%20Patient%20Record%20Management%20-%20Memento,%20Prototype.png)
+*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
+
+### Part B - Appointment Scheduling (Mediator)
+![Appointment Scheduling](UML%20Class%20Diagrams/Part%20B%20-%20Appointment%20Scheduling%20-%20Mediator.png)
+*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
+
+### Part C - Billing and Insurance Claims (Chain of Responsibility)
+![Billing and Insurance Claims](UML%20Class%20Diagrams/Part%20C%20-%20Billing%20and%20Insurance%20Claims%20-%20Chain%20of%20Responsibility.png)
+*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
+
+### Part D - Medical Staff Roles and Permissions (Decorator)
+![Medical Staff Roles and Permissions](UML%20Class%20Diagrams/Part%20D%20-%20Medical%20Staff%20Roles%20and%20Permissions%20-%20Decorator.png)
+*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
+
+### Part E - Generating Medical Reports (Visitor)
+![Generating Medical Reports](UML%20Class%20Diagrams/Part%20E%20-%20Generating%20Medical%20Reports%20-%20Visitor.png)
+*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
+
+### Part F - Security Considerations (Decorator, DAO)
+![Security Considerations](UML%20Class%20Diagrams/Part%20F%20-%20Security%20Considerations%20-%20Decorator,%20DAO.png)
+*Right click the Image and choose "Please Open image in New Tab" Then you can view the image with Max Quality*
 
 ---
 
@@ -365,10 +405,14 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## 📞 Support & Contact
 
-- 📧 **Email**: support@globemed.com
+- 📧 **Email**: [isharax9@gmail.com](mailto:isharax9@gmail.com)
+- 💬 **Telegram**: [https://t.me/mac_knight141](https://t.me/mac_knight141)
+- 💼 **LinkedIn**: [https://www.linkedin.com/in/isharax9/](https://www.linkedin.com/in/isharax9/)
+- 📸 **Instagram**: [https://www.instagram.com/mac_knight141/](https://www.instagram.com/mac_knight141/)
+- 🐦 **Twitter**: [https://twitter.com/isharax9](https://twitter.com/isharax9)
 - 🐛 **Bug Reports**: [GitHub Issues](https://github.com/isharax9/healthcare-system/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/isharax9/healthcare-system/discussions)
-- 📖 **Documentation**: [Wiki](https://github.com/isharax9/healthcare-system/wiki)
+- 📖 **Documentation**: [Complete Project Docs](https://macnalk.github.io/GlobeMed-Healthcare-Management-System-Docs/)
 
 ---
 
