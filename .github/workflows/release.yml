@@ -19,8 +19,9 @@ jobs:
       - uses: googleapis/release-please-action@v4
         id: release
         with:
-          release-type: java
-          package-name: healthcare-system
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-artifacts:
     runs-on: ubuntu-latest
@@ -33,7 +34,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 17
 
       - name: Cache Maven packages
         uses: actions/cache@v4
@@ -50,7 +51,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: healthcare-system-jar
-          path: target/healthcare-system-${{ needs.release-please.outputs.version }}.jar
+          path: target/healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar
 
   build-windows:
     runs-on: windows-latest
@@ -65,8 +66,8 @@ jobs:
         run: |
           jpackage --type exe \
             --input . \
-            --main-jar healthcare-system-${{ needs.release-please.outputs.version }}.jar \
-            --main-class com.globemed.healthcare.Main \
+            --main-jar healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar \
+            --main-class com.globemed.Main \
             --name "Healthcare System" \
             --app-version ${{ needs.release-please.outputs.version }} \
             --vendor "YourCompany" \
@@ -90,12 +91,11 @@ jobs:
         run: |
           jpackage --type dmg \
             --input . \
-            --main-jar healthcare-system-${{ needs.release-please.outputs.version }}.jar \
-            --main-class com.globemed.healthcare.Main \
+            --main-jar healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar \
+            --main-class com.globemed.Main \
             --name "Healthcare System" \
             --app-version ${{ needs.release-please.outputs.version }} \
-            --vendor "YourCompany" \
-            --icon src/main/resources/icon.icns
+            --vendor "YourCompany"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -115,15 +115,15 @@ jobs:
         run: |
           jpackage --type deb \
             --input . \
-            --main-jar healthcare-system-${{ needs.release-please.outputs.version }}.jar \
-            --main-class com.globemed.healthcare.Main \
+            --main-jar healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar \
+            --main-class com.globemed.Main \
             --name "Healthcare System" \
             --app-version ${{ needs.release-please.outputs.version }} \
             --vendor "YourCompany"
           jpackage --type rpm \
             --input . \
-            --main-jar healthcare-system-${{ needs.release-please.outputs.version }}.jar \
-            --main-class com.globemed.healthcare.Main \
+            --main-jar healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar \
+            --main-class com.globemed.Main \
             --name "Healthcare System" \
             --app-version ${{ needs.release-please.outputs.version }} \
             --vendor "YourCompany"
