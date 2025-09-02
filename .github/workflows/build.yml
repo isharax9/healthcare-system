@@ -55,12 +55,17 @@ jobs:
         DB_PASSWORD: ${{ env.DB_PASSWORD || '' }}
       
     - name: Generate test report
-      uses: dorny/test-reporter@v1
       if: success() || failure()
-      with:
-        name: Maven Tests
-        path: target/surefire-reports/*.xml
-        reporter: java-junit
+      run: |
+        echo "Test execution completed"
+        if [ -d "target/surefire-reports" ]; then
+          echo "Test reports generated:"
+          ls -la target/surefire-reports/
+          echo "Test summary:"
+          find target/surefire-reports -name "*.xml" -exec grep -l "testcase" {} \; | wc -l
+        else
+          echo "No test reports found"
+        fi
 
   build-jar:
     name: Build JAR
