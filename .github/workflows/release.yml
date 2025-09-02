@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  checks: write
 
 jobs:
   release-please:
@@ -63,26 +64,30 @@ jobs:
           distribution: 'temurin'
           
       - name: Cache Maven dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
             
-      - name: Run tests
-        run: mvn clean test
+      - name: Run tests with fallback configuration
+        run: |
+          echo "Running tests for release build..."
+          mvn clean test
         env:
-          DB_URL: ${{ env.DB_URL }}
-          DB_USERNAME: ${{ env.DB_USERNAME }}
-          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_URL: ${{ env.DB_URL || 'jdbc:mysql://localhost:3306/globemed_db' }}
+          DB_USERNAME: ${{ env.DB_USERNAME || 'root' }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD || '' }}
           
-      - name: Build JAR
-        run: mvn clean package -DskipTests
+      - name: Build JAR with fallback configuration
+        run: |
+          echo "Building release JAR..."
+          mvn clean package -DskipTests
         env:
-          DB_URL: ${{ env.DB_URL }}
-          DB_USERNAME: ${{ env.DB_USERNAME }}
-          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_URL: ${{ env.DB_URL || 'jdbc:mysql://localhost:3306/globemed_db' }}
+          DB_USERNAME: ${{ env.DB_USERNAME || 'root' }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD || '' }}
           
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
@@ -113,7 +118,7 @@ jobs:
           distribution: 'temurin'
           
       - name: Cache Maven dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -123,9 +128,9 @@ jobs:
       - name: Build application
         run: mvn clean package -DskipTests
         env:
-          DB_URL: ${{ env.DB_URL }}
-          DB_USERNAME: ${{ env.DB_USERNAME }}
-          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_URL: ${{ env.DB_URL || 'jdbc:mysql://localhost:3306/globemed_db' }}
+          DB_USERNAME: ${{ env.DB_USERNAME || 'root' }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD || '' }}
           
       - name: Create Windows installer with jpackage
         run: |
@@ -172,7 +177,7 @@ jobs:
           distribution: 'temurin'
           
       - name: Cache Maven dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -182,9 +187,9 @@ jobs:
       - name: Build application
         run: mvn clean package -DskipTests
         env:
-          DB_URL: ${{ env.DB_URL }}
-          DB_USERNAME: ${{ env.DB_USERNAME }}
-          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_URL: ${{ env.DB_URL || 'jdbc:mysql://localhost:3306/globemed_db' }}
+          DB_USERNAME: ${{ env.DB_USERNAME || 'root' }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD || '' }}
           
       - name: Create macOS app bundle with jpackage
         run: |
@@ -241,7 +246,7 @@ jobs:
           distribution: 'temurin'
           
       - name: Cache Maven dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -251,9 +256,9 @@ jobs:
       - name: Build application
         run: mvn clean package -DskipTests
         env:
-          DB_URL: ${{ env.DB_URL }}
-          DB_USERNAME: ${{ env.DB_USERNAME }}
-          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_URL: ${{ env.DB_URL || 'jdbc:mysql://localhost:3306/globemed_db' }}
+          DB_USERNAME: ${{ env.DB_USERNAME || 'root' }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD || '' }}
           
       - name: Create Linux app image with jpackage
         run: |
