@@ -2,12 +2,12 @@
 
 <div align="center">
 
-![Java](https://img.shields.io/badge/Java-21+-007396?style=for-the-badge&logo=java&logoColor=white)
+![Java](https://img.shields.io/badge/Java-17+-007396?style=for-the-badge&logo=java&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
 ![Maven](https://img.shields.io/badge/Maven-3.9+-C71A36?style=for-the-badge&logo=apache-maven&logoColor=white)
 ![Swing](https://img.shields.io/badge/Swing-UI-007396?style=for-the-badge&logo=java&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-1.4-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.4-blue?style=for-the-badge)
 
 **🚀 A comprehensive, enterprise-grade healthcare management system built with Java 21, featuring advanced patient management, intelligent appointment scheduling, automated billing, and powerful reporting capabilities with modern UI/UX design.**
 
@@ -57,6 +57,8 @@
 </div>
 
 > 💡 **Tip**: Right-click any image and select "Open image in new tab" to view at maximum quality
+
+> 💡 **Tip**: You can view this Diagrams more comfortably with [📖 Complete Project Documentation](https://macnalk.github.io/GlobeMed-HMS-Docs/)
 
 ### Complete Application Overview
 <div align="center">
