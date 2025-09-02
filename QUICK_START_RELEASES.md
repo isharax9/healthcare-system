@@ -1,6 +1,9 @@
-# 🚀 Quick Start Guide for Automated Releases
+# 🚀 Quick Start Guide for Manual Releases
 
-## How to Create Your First Automated Release
+> **Note**: Automated releases have been temporarily disabled due to pipeline issues. 
+> This guide covers the manual tag-based release process that is currently active.
+
+## How to Create Your First Manual Release
 
 ### 1. Make Changes to Your Code
 ```bash
@@ -8,86 +11,79 @@
 # ... edit code files ...
 ```
 
-### 2. Commit Using Conventional Format
+### 2. Commit Your Changes (Any Format)
 ```bash
-# For a new feature (minor version bump: 1.0.0 → 1.1.0)
+# You can use any commit message format for manual releases
 git add .
-git commit -m "feat(patients): add advanced patient search functionality"
+git commit -m "Add new patient search functionality"
 
-# For a bug fix (patch version bump: 1.0.0 → 1.0.1)  
-git commit -m "fix(database): resolve connection timeout issues"
-
-# For breaking changes (major version bump: 1.0.0 → 2.0.0)
-git commit -m "feat!: redesign authentication API
-
-BREAKING CHANGE: The old auth methods have been removed"
+# Or use conventional commits if you prefer
+git commit -m "feat(patients): add advanced search with filters"
 ```
 
-### 3. Push to Main Branch
+### 3. Create and Push a Version Tag
 ```bash
-git push origin main
+# Create a version tag (following semantic versioning)
+git tag v1.0.1
+
+# Push the tag to trigger the release build
+git push origin v1.0.1
 ```
 
 ### 4. Watch the Magic Happen!
-1. **Release Please** automatically analyzes your commits
-2. Creates a **Release PR** with:
-   - Automatically calculated version number
-   - Generated changelog with your changes
-   - Updated version in `pom.xml`
-3. **Review and merge** the Release PR
-4. **Cross-platform builds** automatically trigger:
+1. **Tag push triggers build** automatically in GitHub Actions
+2. **Cross-platform builds** automatically execute:
    - Windows `.exe` installer
    - macOS `.dmg` installer  
    - Linux `.deb` and `.rpm` packages
    - Universal `.jar` file
-5. **GitHub Release** created with all artifacts
+3. **GitHub Release** created with all artifacts and changelog
 
-## 🛠️ Alternative: Use the Release Helper Script
+## 🛠️ Version Tagging Guidelines
 
-For interactive commit creation:
+Follow [Semantic Versioning](https://semver.org/) when creating tags:
+
+- **Patch release** (1.0.0 → 1.0.1): Bug fixes, small improvements
+- **Minor release** (1.0.0 → 1.1.0): New features, backwards compatible
+- **Major release** (1.0.0 → 2.0.0): Breaking changes
 
 ```bash
-# Interactive commit helper
-./release-helper.sh commit
-
-# Check current status
-./release-helper.sh status
-
-# View changelog
-./release-helper.sh changelog
+# Examples:
+git tag v1.0.1   # Patch release
+git tag v1.1.0   # Minor release  
+git tag v2.0.0   # Major release
 ```
-
-## 📋 Commit Types Reference
-
-| Type | Description | Version Impact |
-|------|-------------|----------------|
-| `feat` | New feature | Minor (1.0.0 → 1.1.0) |
-| `fix` | Bug fix | Patch (1.0.0 → 1.0.1) |
-| `feat!` | Breaking change | Major (1.0.0 → 2.0.0) |
-| `docs` | Documentation | Patch |
-| `refactor` | Code refactoring | Patch |
-| `perf` | Performance improvement | Patch |
 
 ## 🎯 Example Release Flow
 
 ```bash
-# Start with version 1.0.0
-git commit -m "feat(auth): add OAuth2 support"
-git commit -m "fix(ui): resolve login button styling"
-git commit -m "feat(reports): add PDF export functionality"
-git push origin main
+# Start with version 1.0.0, make some changes
+git add .
+git commit -m "Add OAuth2 support and fix login styling"
+git commit -m "Add PDF export functionality"
 
-# Release Please creates PR: v1.0.0 → v1.1.0
-# Changelog includes:
-# - Features: OAuth2 support, PDF export
-# - Bug Fixes: Login button styling
+# Create a new minor release
+git tag v1.1.0
+git push origin v1.1.0
+
+# GitHub Actions automatically builds and releases:
+# - Cross-platform installers
+# - GitHub release with changelogs
 ```
 
 ## 🔗 Resources
 
-- **Conventional Commits Guide**: `CONVENTIONAL_COMMITS.md`
-- **Changelog**: `CHANGELOG.md`
+- **Manual Release Process**: Follow the steps above
+- **Semantic Versioning**: https://semver.org/
 - **Contributing Guide**: `CONTRIBUTING.md`
-- **Release Helper**: `./release-helper.sh help`
+- **Build Workflows**: `.github/workflows/build.yml`
 
-Ready to create your first automated release! 🎉
+Ready to create your first manual release! 🎉
+
+## 🔄 Automated Releases (Not Available)
+
+The automated Release Please system has been removed to simplify the pipeline. If you need to add automated releases in the future:
+
+1. Create a new `.github/workflows/release.yml` file with Release Please action
+2. Configure the push trigger for the main branch
+3. Test the workflow thoroughly before merging

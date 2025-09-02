@@ -18,7 +18,7 @@ Make sure you have the following installed:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/helasoftLK/healthcare-system.git
+   git clone https://github.com/isharax9/healthcare-system.git
    cd healthcare-system
    ```
 
@@ -270,44 +270,42 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-**Or use the automated release system:**
+> **Note**: The automated Release Please system has been temporarily disabled due to pipeline issues. Currently, only manual tag-based releases are supported.
 
-```bash
-# Commit with conventional format for automatic releases
-git commit -m "feat: add new patient search functionality"
-git push origin main
+### 🎯 Automated Release System (Temporarily Disabled)
 
-# Release Please will automatically:
-# - Analyze commit messages
-# - Calculate next version (v1.0.0 → v1.1.0)
-# - Generate changelog
-# - Create release PR for review
-```
+> **Important**: The automated Release Please system has been temporarily disabled due to pipeline issues. 
+> The information below is kept for reference and future re-enablement.
 
-### 🎯 Automated Release System
+The project previously used **Release Please** for automated version management:
 
-The project uses **Release Please** for automated version management:
-
-#### How It Works
+#### How It Worked
 1. **Write commits** using [Conventional Commits](CONVENTIONAL_COMMITS.md) format
 2. **Push to main** - Release Please analyzes your commits
 3. **Review release PR** - Automatically created with version bump and changelog
 4. **Merge release PR** - Triggers cross-platform builds and GitHub release
 
-#### Version Bumping Rules
+#### Version Bumping Rules (For Reference)
 - `feat:` commits → **Minor** version bump (1.0.0 → 1.1.0)
 - `fix:` commits → **Patch** version bump (1.0.0 → 1.0.1)
 - `feat!:` or `BREAKING CHANGE:` → **Major** version bump (1.0.0 → 2.0.0)
 
-#### Changelog Generation
+#### To Re-enable (Future)
+If you need to add automated releases:
+1. Create a new `.github/workflows/release.yml` file with Release Please action
+2. Configure push trigger for main branch
+3. Test thoroughly before deployment
+
+#### Changelog Generation (For Reference)
 - **Features** - New functionality added
 - **Bug Fixes** - Issues resolved
 - **Performance Improvements** - Optimizations made
 - **Documentation** - Docs updates
 - **Code Refactoring** - Code improvements
 
-#### Example Release Flow
+#### Previous Release Flow Example
 ```bash
+# This process is currently disabled
 # Feature development
 git commit -m "feat(patients): add advanced search with filters"
 git commit -m "fix(database): resolve connection timeout issues"
@@ -316,7 +314,7 @@ git commit -m "docs: update API documentation"
 # Push to main
 git push origin main
 
-# Release Please creates PR with:
+# Release Please would create PR with:
 # - Version: 1.0.0 → 1.1.0 (due to feat commit)
 # - Changelog with all changes categorized
 # - Updated version in pom.xml

@@ -27,7 +27,7 @@ Used when running the application locally on your development machine.
 
 ### Step 1: Access Repository Secrets
 
-1. Go to your GitHub repository: `https://github.com/helasoftLK/healthcare-system`
+1. Go to your GitHub repository: `https://github.com/isharax9/healthcare-system`
 2. Click on **Settings** (in the repository menu)
 3. In the left sidebar, click **Secrets and variables**
 4. Click **Actions**

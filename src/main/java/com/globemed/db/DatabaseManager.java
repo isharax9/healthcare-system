@@ -10,6 +10,7 @@ import java.sql.SQLException;
  */
 public class DatabaseManager {
     // Default values that can be overridden by environment variables
+    // You can't just hack me with this XD
     private static final String DEFAULT_JDBC_URL = "jdbc:mysql://localhost:3306/globemed_db";
     private static final String DEFAULT_USERNAME = "root";
     private static final String DEFAULT_PASSWORD = "NewPassword123!";

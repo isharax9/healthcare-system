@@ -11,7 +11,7 @@
 
 **🚀 A comprehensive, enterprise-grade healthcare management system built with Java 21, featuring advanced patient management, intelligent appointment scheduling, automated billing, and powerful reporting capabilities with modern UI/UX design.**
 
-📚 **[📖 Complete Project Documentation](https://macnalk.github.io/GlobeMed-Healthcare-Management-System-Docs/)** - Detailed documentation, guides, and specifications
+📚 **[📖 Complete Project Documentation](https://macnalk.github.io/GlobeMed-HMS-Docs/)** - Detailed documentation, guides, and specifications
 
 [🚀 Quick Start](#-getting-started) • [📊 UML Diagrams](#-uml-class-diagrams) • [📋 Features](#-features) • [🏗️ Architecture](#️-architecture) • [📖 API Docs](#-api-documentation)
 
@@ -393,18 +393,18 @@ The project includes automated CI/CD pipelines that generate native executables 
 | 🐧 **Linux** | `.deb`, `.rpm`, portable scripts | Package manager installation or direct execution |
 | ☕ **Universal** | `.jar` executable | Run with `java -jar` (requires Java 17+) |
 
-### **Automated Releases**
+### **Manual Releases** 
 
-- **Continuous Integration**: Every push triggers cross-platform builds
-- **Automated Testing**: Comprehensive test suite runs on all platforms  
+> **Important**: Automated releases are temporarily disabled. Use manual tag-based releases.
+
+- **Manual Process**: Create version tags to trigger releases (`git tag v1.0.1 && git push origin v1.0.1`)
+- **Cross-Platform Builds**: Automatic builds for Windows, macOS, and Linux on tag push
 - **Release Packaging**: Tagged releases automatically create distributable packages
 - **GitHub Actions**: Fully automated build pipeline with artifact uploads
-- **Semantic Versioning**: Automatic version bumping (v1.0.0 → v1.1.0, v1.2.0, etc.)
-- **Changelog Generation**: Automated changelog creation with features and changes
-- **Conventional Commits**: Structured commit messages for automatic releases
+- **Complete Control**: Manual control over release timing and versioning
 
+> 📋 **Release Guide**: Follow the [Manual Release Guide](MANUAL_RELEASE_GUIDE.md) for step-by-step instructions on creating releases.
 > 🔐 **CI/CD Configuration**: For automated builds with database integration, see the [GitHub Secrets Setup Guide](GITHUB_SECRETS_SETUP.md) to configure repository secrets properly.
-> 📋 **Release Process**: Follow the [Conventional Commits Guide](CONVENTIONAL_COMMITS.md) for automatic version management and changelog generation.
 
 ### **Manual Build Commands**
 
@@ -743,7 +743,7 @@ This software is provided for **educational and demonstration purposes**. While 
 |------|------|-------------|
 | 🐛 **Bug Reports** | [GitHub Issues](https://github.com/isharax9/healthcare-system/issues) | Report bugs and request features |
 | 💬 **Discussions** | [GitHub Discussions](https://github.com/isharax9/healthcare-system/discussions) | Community Q&A and ideas |
-| 📖 **Documentation** | [Project Docs](https://macnalk.github.io/GlobeMed-Healthcare-Management-System-Docs/) | Complete guides and references |
+| 📖 **Documentation** | [Project Docs](https://macnalk.github.io/GlobeMed-HMS-Docs/) | Complete guides and references |
 
 ### 🌟 **Show Your Support**
 
@@ -764,7 +764,7 @@ This software is provided for **educational and demonstration purposes**. While 
 
 <div align="center" style="margin: 20px 0;">
 
-**[⬇️ Download Now](https://github.com/isharax9/healthcare-system/archive/refs/heads/main.zip)** • **[📖 Read Docs](https://macnalk.github.io/GlobeMed-Healthcare-Management-System-Docs/)** • **[🤝 Contribute](https://github.com/isharax9/healthcare-system/blob/main/CONTRIBUTING.md)**
+**[⬇️ Download Now](https://github.com/isharax9/healthcare-system/archive/refs/heads/main.zip)** • **[📖 Read Docs](https://macnalk.github.io/GlobeMed-HMS-Docs/)** • **[🤝 Contribute](https://github.com/isharax9/healthcare-system/blob/main/CONTRIBUTING.md)**
 
 </div>
 
