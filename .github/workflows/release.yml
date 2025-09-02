@@ -1,0 +1,350 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Release Please
+        id: release
+        uses: google-github-actions/release-please-action@v4
+        with:
+          release-type: maven
+          package-name: healthcare-system
+          changelog-sections: |
+            [
+              {"type":"feat","section":"Features","hidden":false},
+              {"type":"fix","section":"Bug Fixes","hidden":false},
+              {"type":"perf","section":"Performance Improvements","hidden":false},
+              {"type":"revert","section":"Reverts","hidden":false},
+              {"type":"docs","section":"Documentation","hidden":false},
+              {"type":"style","section":"Styles","hidden":false},
+              {"type":"refactor","section":"Code Refactoring","hidden":false},
+              {"type":"test","section":"Tests","hidden":false},
+              {"type":"build","section":"Build System","hidden":false},
+              {"type":"ci","section":"Continuous Integration","hidden":false},
+              {"type":"chore","section":"Chores","hidden":true}
+            ]
+
+  build-and-release:
+    name: Build and Release
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    env:
+      JAVA_VERSION: '17'
+      MAVEN_OPTS: -Dmaven.repo.local=.m2/repository
+      # Database configuration for testing and validation
+      DB_URL: ${{ secrets.DB_URL }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: .m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+            
+      - name: Run tests
+        run: mvn clean test
+        env:
+          DB_URL: ${{ env.DB_URL }}
+          DB_USERNAME: ${{ env.DB_USERNAME }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          
+      - name: Build JAR
+        run: mvn clean package -DskipTests
+        env:
+          DB_URL: ${{ env.DB_URL }}
+          DB_USERNAME: ${{ env.DB_USERNAME }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: healthcare-system-jar-${{ needs.release-please.outputs.version }}
+          path: target/*.jar
+
+  build-windows:
+    name: Build Windows Executable
+    needs: [release-please, build-and-release]
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: windows-latest
+    env:
+      JAVA_VERSION: '17'
+      MAVEN_OPTS: -Dmaven.repo.local=.m2/repository
+      DB_URL: ${{ secrets.DB_URL }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: .m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+            
+      - name: Build application
+        run: mvn clean package -DskipTests
+        env:
+          DB_URL: ${{ env.DB_URL }}
+          DB_USERNAME: ${{ env.DB_USERNAME }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          
+      - name: Create Windows installer with jpackage
+        run: |
+          jpackage --input target `
+                   --name "GlobeMed Healthcare System" `
+                   --main-jar healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar `
+                   --main-class com.globemed.Main `
+                   --type exe `
+                   --dest dist `
+                   --app-version "${{ needs.release-please.outputs.version }}" `
+                   --vendor "GlobeMed Healthcare Solutions" `
+                   --description "Healthcare Management System v${{ needs.release-please.outputs.version }}" `
+                   --win-console `
+                   --win-dir-chooser `
+                   --win-menu `
+                   --win-shortcut
+          
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: healthcare-system-windows-${{ needs.release-please.outputs.version }}
+          path: dist/*.exe
+
+  build-macos:
+    name: Build macOS Application
+    needs: [release-please, build-and-release]
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: macos-latest
+    env:
+      JAVA_VERSION: '17'
+      MAVEN_OPTS: -Dmaven.repo.local=.m2/repository
+      DB_URL: ${{ secrets.DB_URL }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: .m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+            
+      - name: Build application
+        run: mvn clean package -DskipTests
+        env:
+          DB_URL: ${{ env.DB_URL }}
+          DB_USERNAME: ${{ env.DB_USERNAME }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          
+      - name: Create macOS app bundle with jpackage
+        run: |
+          jpackage --input target \
+                   --name "GlobeMed Healthcare System" \
+                   --main-jar healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar \
+                   --main-class com.globemed.Main \
+                   --type app-image \
+                   --dest dist \
+                   --app-version "${{ needs.release-please.outputs.version }}" \
+                   --vendor "GlobeMed Healthcare Solutions" \
+                   --description "Healthcare Management System v${{ needs.release-please.outputs.version }}"
+          
+      - name: Create DMG installer
+        run: |
+          jpackage --input target \
+                   --name "GlobeMed Healthcare System" \
+                   --main-jar healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar \
+                   --main-class com.globemed.Main \
+                   --type dmg \
+                   --dest dist \
+                   --app-version "${{ needs.release-please.outputs.version }}" \
+                   --vendor "GlobeMed Healthcare Solutions" \
+                   --description "Healthcare Management System v${{ needs.release-please.outputs.version }}"
+          
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: healthcare-system-macos-${{ needs.release-please.outputs.version }}
+          path: |
+            dist/*.app
+            dist/*.dmg
+
+  build-linux:
+    name: Build Linux Application
+    needs: [release-please, build-and-release]
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    env:
+      JAVA_VERSION: '17'
+      MAVEN_OPTS: -Dmaven.repo.local=.m2/repository
+      DB_URL: ${{ secrets.DB_URL }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: .m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+            
+      - name: Build application
+        run: mvn clean package -DskipTests
+        env:
+          DB_URL: ${{ env.DB_URL }}
+          DB_USERNAME: ${{ env.DB_USERNAME }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          
+      - name: Create Linux app image with jpackage
+        run: |
+          jpackage --input target \
+                   --name "globemed-healthcare-system" \
+                   --main-jar healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar \
+                   --main-class com.globemed.Main \
+                   --type app-image \
+                   --dest dist \
+                   --app-version "${{ needs.release-please.outputs.version }}" \
+                   --vendor "GlobeMed Healthcare Solutions" \
+                   --description "Healthcare Management System v${{ needs.release-please.outputs.version }}"
+          
+      - name: Create DEB package
+        run: |
+          jpackage --input target \
+                   --name "globemed-healthcare-system" \
+                   --main-jar healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar \
+                   --main-class com.globemed.Main \
+                   --type deb \
+                   --dest dist \
+                   --app-version "${{ needs.release-please.outputs.version }}" \
+                   --vendor "GlobeMed Healthcare Solutions" \
+                   --description "Healthcare Management System v${{ needs.release-please.outputs.version }}" \
+                   --linux-menu-group "Office" \
+                   --linux-shortcut
+          
+      - name: Create RPM package
+        run: |
+          jpackage --input target \
+                   --name "globemed-healthcare-system" \
+                   --main-jar healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar \
+                   --main-class com.globemed.Main \
+                   --type rpm \
+                   --dest dist \
+                   --app-version "${{ needs.release-please.outputs.version }}" \
+                   --vendor "GlobeMed Healthcare Solutions" \
+                   --description "Healthcare Management System v${{ needs.release-please.outputs.version }}" \
+                   --linux-menu-group "Office" \
+                   --linux-shortcut
+          
+      - name: Create portable executable scripts
+        run: |
+          mkdir -p dist/portable
+          cp target/healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar dist/portable/
+          
+          # Create launch script for Linux
+          cat > dist/portable/run-globemed.sh << 'EOF'
+          #!/bin/bash
+          SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+          java -jar "$SCRIPT_DIR/healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar" "$@"
+          EOF
+          chmod +x dist/portable/run-globemed.sh
+          
+          # Create launch script for Windows (when running on Linux)
+          cat > dist/portable/run-globemed.bat << 'EOF'
+          @echo off
+          set SCRIPT_DIR=%~dp0
+          java -jar "%SCRIPT_DIR%healthcare-system-${{ needs.release-please.outputs.version }}-executable.jar" %*
+          EOF
+          
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: healthcare-system-linux-${{ needs.release-please.outputs.version }}
+          path: |
+            dist/*.deb
+            dist/*.rpm
+            dist/globemed-healthcare-system
+            dist/portable/*
+
+  upload-release-assets:
+    name: Upload Release Assets
+    needs: [release-please, build-windows, build-macos, build-linux]
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+          files: |
+            healthcare-system-windows-${{ needs.release-please.outputs.version }}/*.exe
+            healthcare-system-macos-${{ needs.release-please.outputs.version }}/*.dmg
+            healthcare-system-linux-${{ needs.release-please.outputs.version }}/*.deb
+            healthcare-system-linux-${{ needs.release-please.outputs.version }}/*.rpm
+            healthcare-system-linux-${{ needs.release-please.outputs.version }}/portable/*
+            healthcare-system-jar-${{ needs.release-please.outputs.version }}/*.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

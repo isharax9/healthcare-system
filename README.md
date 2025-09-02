@@ -195,7 +195,7 @@
 
 | Component | Technology | Version | Purpose |
 |-----------|------------|---------|---------|
-| **Backend Language** | ☕ Java | 21+ | Core application logic & enterprise features |
+| **Backend Language** | ☕ Java | 17+ | Core application logic & enterprise features |
 | **Frontend Framework** | 🖥️ Java Swing | Built-in | Desktop GUI interface with modern theming |
 | **Database Engine** | 🗄️ MySQL | 8.0+ | Robust data persistence & ACID compliance |
 | **Build Automation** | 🔧 Apache Maven | 3.9+ | Dependency management & project lifecycle |
@@ -322,14 +322,14 @@ ClaimResult result = basicProcessor.process(claim);
 
 | Requirement | Version | Download Link | Purpose |
 |-------------|---------|---------------|---------|
-| ☕ **Java Development Kit (JDK)** | 21+ | [Oracle JDK](https://www.oracle.com/java/technologies/downloads/) \| [OpenJDK](https://openjdk.org/) | Core runtime & development |
+| ☕ **Java Development Kit (JDK)** | 17+ | [Oracle JDK](https://www.oracle.com/java/technologies/downloads/) \| [OpenJDK](https://openjdk.org/) | Core runtime & development |
 | 🗄️ **MySQL Server** | 8.0+ | [MySQL Downloads](https://dev.mysql.com/downloads/mysql/) | Database engine |
 | 🔧 **Apache Maven** | 3.9+ | [Maven Downloads](https://maven.apache.org/download.cgi) | Build automation |
 | 🖥️ **IDE (Recommended)** | Latest | [IntelliJ IDEA](https://www.jetbrains.com/idea/) \| [Eclipse](https://www.eclipse.org/) \| [VS Code](https://code.visualstudio.com/) | Development environment |
 
 </div>
 
-> 💡 **Note**: This project uses Java 21 features including pattern matching, records, and enhanced switch expressions for optimal performance and code clarity.
+> 💡 **Note**: This project uses Java 17+ features for optimal performance and compatibility across different environments..
 
 ### Installation
 
@@ -372,7 +372,55 @@ ClaimResult result = basicProcessor.process(claim);
    
    # Run the application
    mvn exec:java -Dexec.mainClass="com.globemed.Main"
+   
+   # Create executable JAR
+   mvn clean package
+   
+   # Run the executable JAR
+   java -jar target/healthcare-system-1.0-SNAPSHOT-executable.jar
    ```
+
+## 📦 Cross-Platform Builds
+
+The project includes automated CI/CD pipelines that generate native executables for all major platforms:
+
+### **Available Distributions**
+
+| Platform | File Types | Installation Method |
+|----------|------------|-------------------|
+| 🖥️ **Windows** | `.exe` installer | Double-click to install, includes Start Menu shortcuts |
+| 🍎 **macOS** | `.dmg`, `.app` bundle | Drag to Applications folder or run DMG installer |
+| 🐧 **Linux** | `.deb`, `.rpm`, portable scripts | Package manager installation or direct execution |
+| ☕ **Universal** | `.jar` executable | Run with `java -jar` (requires Java 17+) |
+
+### **Automated Releases**
+
+- **Continuous Integration**: Every push triggers cross-platform builds
+- **Automated Testing**: Comprehensive test suite runs on all platforms  
+- **Release Packaging**: Tagged releases automatically create distributable packages
+- **GitHub Actions**: Fully automated build pipeline with artifact uploads
+- **Semantic Versioning**: Automatic version bumping (v1.0.0 → v1.1.0, v1.2.0, etc.)
+- **Changelog Generation**: Automated changelog creation with features and changes
+- **Conventional Commits**: Structured commit messages for automatic releases
+
+> 🔐 **CI/CD Configuration**: For automated builds with database integration, see the [GitHub Secrets Setup Guide](GITHUB_SECRETS_SETUP.md) to configure repository secrets properly.
+> 📋 **Release Process**: Follow the [Conventional Commits Guide](CONVENTIONAL_COMMITS.md) for automatic version management and changelog generation.
+
+### **Manual Build Commands**
+
+```bash
+# Build for all platforms (requires platform-specific runners)
+mvn clean package -DskipTests
+
+# Create Windows installer (requires Windows with jpackage)
+jpackage --input target --name "GlobeMed Healthcare System" --main-jar healthcare-system-1.0-SNAPSHOT-executable.jar --main-class com.globemed.Main --type exe
+
+# Create macOS app (requires macOS with jpackage)  
+jpackage --input target --name "GlobeMed Healthcare System" --main-jar healthcare-system-1.0-SNAPSHOT-executable.jar --main-class com.globemed.Main --type dmg
+
+# Create Linux packages (requires Linux with jpackage)
+jpackage --input target --name "globemed-healthcare-system" --main-jar healthcare-system-1.0-SNAPSHOT-executable.jar --main-class com.globemed.Main --type deb
+```
 
 <div align="center">
 
@@ -459,8 +507,55 @@ users (user_id, username, password_hash, role, staff_id)
 
 ## 🔧 Configuration
 
-### Application Properties
-Create `application.properties` in `src/main/resources/`:
+### Database Configuration
+
+The application supports flexible database configuration through environment variables, system properties, or configuration files.
+
+> 📚 **Multiple Configuration Guides Available:**
+> - [Environment Setup Guide](ENVIRONMENT_SETUP.md) - Local development setup
+> - [GitHub Secrets Setup Guide](GITHUB_SECRETS_SETUP.md) - CI/CD and repository configuration
+> - [Contributing Guide](CONTRIBUTING.md) - Development workflow
+
+#### **Method 1: Environment Variables (Recommended for Production)**
+
+Set the following environment variables:
+
+```bash
+# Linux/macOS
+export DB_URL="jdbc:mysql://localhost:3306/globemed_db"
+export DB_USERNAME="your_username" 
+export DB_PASSWORD="your_password"
+
+# Windows Command Prompt
+set DB_URL=jdbc:mysql://localhost:3306/globemed_db
+set DB_USERNAME=your_username
+set DB_PASSWORD=your_password
+
+# Windows PowerShell
+$env:DB_URL="jdbc:mysql://localhost:3306/globemed_db"
+$env:DB_USERNAME="your_username"
+$env:DB_PASSWORD="your_password"
+```
+
+#### **Method 2: System Properties**
+
+When running the application:
+
+```bash
+java -jar healthcare-system-1.0-SNAPSHOT-executable.jar \
+     -Ddb.url="jdbc:mysql://localhost:3306/globemed_db" \
+     -Ddb.username="your_username" \
+     -Ddb.password="your_password"
+
+# Or with Maven
+mvn exec:java -Ddb.url="jdbc:mysql://localhost:3306/globemed_db" \
+              -Ddb.username="your_username" \
+              -Ddb.password="your_password"
+```
+
+#### **Method 3: Application Properties File**
+
+Edit `src/main/resources/application.properties`:
 
 ```properties
 # Database Configuration
@@ -471,13 +566,23 @@ db.driver=com.mysql.cj.jdbc.Driver
 
 # Application Settings
 app.name=GlobeMed Healthcare System
-app.version=1.4
+app.version=1.0-SNAPSHOT
 app.theme=light
 
 # Report Settings
 reports.output.path=./reports/
 reports.logo.path=./assets/logo.png
 ```
+
+### **Configuration Priority**
+
+The application uses the following priority order for configuration:
+
+1. **Environment Variables** (highest priority)
+2. **System Properties** 
+3. **Application Properties File** (lowest priority)
+
+This allows for flexible deployment across different environments without code changes.
 
 ### Theme Customization
 The system supports custom themes through the UI. Users can toggle between:
