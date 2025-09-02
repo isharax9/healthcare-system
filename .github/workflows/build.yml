@@ -56,7 +56,6 @@ jobs:
   build-jar:
     name: Build JAR
     runs-on: ubuntu-latest
-    needs: test
     
     steps:
     - name: Checkout code
